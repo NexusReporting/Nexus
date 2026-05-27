@@ -18,32 +18,32 @@ Tracks the full lifecycle of a demand generation pilot: lead sourcing through co
 
 **11 tabs:**
 
-- **Summary** — KPI tiles, weekly volume trend, pickup rate, open measurement gaps
-- **Targets and Pace** — Quarterly PO burndown, velocity tracking, pipeline feed vs target, revenue model
-- **Funnel and Age** — Lifecycle stage counts, stage dwell time, attrition rates, qualification gates
-- **AI Calls (NLPearl)** — Attempt and connect volume, pickup rate, call signal distribution, SLA compliance, benchmarks
-- **Campaign Reporting** — Audience intelligence: job function, revenue size, employee count, industry, VM environment, migration timeline, decision role, geographic distribution, campaign pacing
-- **Email** — Consent and link testing status, benchmarks
-- **Web** — Analytics tagging status, implementation checklist, benchmarks
-- **Improvement Plan** — Governance cadence and CIP structure
-- **Lead Scoring** — Fit vs activity scoring matrix, weight configuration, decay rules
-- **Metric Register** — Full metric catalog with MET IDs, calculations, sources, and priority tiers
-- **Glossary** — Searchable reference for all program terms, acronyms, and systems
+- **Summary** - KPI tiles, weekly volume trend, pickup rate, open measurement gaps
+- **Targets and Pace** - Quarterly PO burndown, velocity tracking, pipeline feed vs target, revenue model
+- **Funnel and Age** - Lifecycle stage counts, stage dwell time, attrition rates, qualification gates
+- **AI Calls (NLPearl)** - Attempt and connect volume, pickup rate, call signal distribution, SLA compliance, benchmarks
+- **Campaign Reporting** - Audience intelligence: job function, revenue size, employee count, industry, VM environment, migration timeline, decision role, geographic distribution, campaign pacing
+- **Email** - Consent and link testing status, benchmarks
+- **Web** - Analytics tagging status, implementation checklist, benchmarks
+- **Improvement Plan** - Governance cadence and CIP structure
+- **Lead Scoring** - Fit vs activity scoring matrix, weight configuration, decay rules
+- **Metric Register** - Full metric catalog with MET IDs, calculations, sources, and priority tiers
+- **Glossary** - Searchable reference for all program terms, acronyms, and systems
 
 ---
 
 ## Features
 
-- **Password gate** — Prompt on page load. Session-persisted so refresh does not re-prompt.
-- **Light and dark theme** — Toggle in the topbar. Defaults to light.
-- **Edit mode** — Inline field editing with changelog tracking. Save and Export downloads a new versioned HTML file with updated data baked in.
-- **Collapsible insight notes** — 23 analyst notes throughout the dashboard, collapsed by default. Hidden on mobile.
-- **Chart tooltips** — Hover any canvas chart to see exact data point values.
-- **Print support** — Print Tab button in the footer. Sidebar hidden, active tab expands to full width. Notes auto-expand in print.
-- **Mobile responsive** — Hamburger nav, single-column reflow, adaptive typography below 768px.
-- **Persistent data footer** — Fixed bar showing data-as-of date, version number, and print button.
-- **Search** — Topbar search filters sidebar nav by keyword across all tabs.
-- **Glossary search** — Dedicated search within the glossary tab.
+- **Password gate** - Prompt on page load. Session-persisted so refresh does not re-prompt.
+- **Light and dark theme** - Toggle in the topbar. Defaults to light.
+- **Edit mode** - Inline field editing with changelog tracking. Save and Export downloads a new versioned HTML file with updated data baked in.
+- **Collapsible insight notes** - 23 analyst notes throughout the dashboard, collapsed by default. Hidden on mobile.
+- **Chart tooltips** - Hover any canvas chart to see exact data point values.
+- **Print support** - Print Tab button in the footer. Sidebar hidden, active tab expands to full width. Notes auto-expand in print.
+- **Mobile responsive** - Hamburger nav, single-column reflow, adaptive typography below 768px.
+- **Persistent data footer** - Fixed bar showing data-as-of date, version number, and print button.
+- **Search** - Topbar search filters sidebar nav by keyword across all tabs.
+- **Glossary search** - Dedicated search within the glossary tab.
 
 ---
 
@@ -54,9 +54,9 @@ All data lives in a single JSON block at the top of `index.html`. You do not nee
 ### What you need
 
 - A plain text editor. In order of preference:
-  - **VS Code** (free at code.visualstudio.com) — recommended
-  - **Notepad** (Windows, built-in) — works fine
-  - **TextEdit** (Mac, built-in) — must be in plain text mode
+  - **VS Code** (free at code.visualstudio.com) - recommended
+  - **Notepad** (Windows, built-in) - works fine
+  - **TextEdit** (Mac, built-in) - must be in plain text mode
 - Do not use Microsoft Word. It will corrupt the file.
 
 ### Step-by-step
@@ -77,7 +77,7 @@ At the very top of the file, search for:
 NEXUS DASHBOARD - DATA BLOCK
 ```
 
-Use `Ctrl+F` (Windows) or `Cmd+F` (Mac) to jump straight to it. This is the only section you will edit. Everything below it is layout and logic — do not touch it.
+Use `Ctrl+F` (Windows) or `Cmd+F` (Mac) to jump straight to it. This is the only section you will edit. Everything below it is layout and logic - do not touch it.
 
 **4. Update the values**
 
@@ -112,7 +112,7 @@ If you prefer not to touch the file directly, use Edit Mode in the live dashboar
 1. Open the dashboard and enter the password
 2. Click **Edit Mode** in the topbar
 3. Click any data field to edit it inline
-4. When done, click **Save and Export** — this downloads a new versioned HTML file with all changes baked in
+4. When done, click **Save and Export** - this downloads a new versioned HTML file with all changes baked in
 5. Upload that file to GitHub as `index.html`
 
 ---
@@ -125,7 +125,7 @@ If you prefer not to touch the file directly, use Edit Mode in the live dashboar
 | PO delivered (`q1_delivered`, `total_delivered`) | As soon as ACE uploads are confirmed |
 | Weeks remaining (`q1_weeks_remaining`) | Weekly |
 | NLPearl call stats (attempts, pickup rate, signals) | Weekly, from NLPearl export |
-| Trend chart arrays (`mel`, `mqp`, `po`, `rates`) | Weekly — append one value per array |
+| Trend chart arrays (`mel`, `mqp`, `po`, `rates`) | Weekly - append one value per array |
 | Campaign totals (`total_leads`, `spend_to_date`) | When new batch arrives |
 | Open gaps text (`open_gaps_text`) | When open items change status |
 | Summary hero subtitle | Weekly or when key numbers shift |
@@ -175,15 +175,15 @@ The block starts immediately after that comment and ends before the closing `</s
 
 ```
 {
-  "meta"          — version, report date, revenue assumption
-  "funnel"        — Eloqua stage counts and dwell times
-  "targets"       — quarterly PO targets and delivered counts
-  "calls"         — NLPearl attempt/connect/signal data
-  "campaign"      — content syndication batch totals and offer breakdown
-  "gaps"          — free-text fields for hero subtitles and open items
-  "chart_trend"   — weekly MEL/MQP/PO arrays for the trend chart
-  "chart_pickup"  — weekly pickup rate array
-  "chart_age"     — stage average dwell hours for the age chart
+  "meta"          - version, report date, revenue assumption
+  "funnel"        - Eloqua stage counts and dwell times
+  "targets"       - quarterly PO targets and delivered counts
+  "calls"         - NLPearl attempt/connect/signal data
+  "campaign"      - content syndication batch totals and offer breakdown
+  "gaps"          - free-text fields for hero subtitles and open items
+  "chart_trend"   - weekly MEL/MQP/PO arrays for the trend chart
+  "chart_pickup"  - weekly pickup rate array
+  "chart_age"     - stage average dwell hours for the age chart
 }
 ```
 
@@ -319,12 +319,12 @@ Source: TechTarget/NetLine batch files.
   "c_level_pct": 66
 }
 ```
-Do not use commas inside numbers (`79900` not `79,900`). `email_opted_out_flag` is boolean — use `true` or `false`, not a string.
+Do not use commas inside numbers (`79900` not `79,900`). `email_opted_out_flag` is boolean - use `true` or `false`, not a string.
 
 ---
 
 #### `gaps`
-Free-text fields. Plain strings only — no HTML.
+Free-text fields. Plain strings only - no HTML.
 ```json
 "gaps": {
   "summary_hero_subtitle": "264 contacts in funnel · 0 POs delivered · ...",
@@ -383,8 +383,8 @@ Average stage dwell in hours. Updated from the Eloqua stage age report.
 - Field names are case-sensitive. Do not rename them.
 - Numbers: no quotes, no commas (`79900` not `"79,900"`).
 - Strings: always wrapped in double quotes.
-- Booleans: `true` or `false` — no quotes, no capitals.
-- Null values: `null` — no quotes.
+- Booleans: `true` or `false` - no quotes, no capitals.
+- Null values: `null` - no quotes.
 - Every line except the last in a section needs a trailing comma.
 - Arrays must keep all elements the same length across related sections (`chart_trend` and `chart_pickup` weeks arrays must match).
 
@@ -405,7 +405,7 @@ Single self-contained HTML file. No external JS libraries. No build tooling.
 - **CSS custom properties** for theming (light/dark token swap on `[data-theme]`)
 - **Vanilla JS** for navigation, chart rendering, search, edit mode, and tooltips
 - **Canvas 2D** for all charts (trend, pickup, age, calls, burndown, velocity, cumulative, VM size, timeline, states)
-- **Google Fonts CDN** for DM Sans, DM Mono, and Bebas Neue — the only external dependency
+- **Google Fonts CDN** for DM Sans, DM Mono, and Bebas Neue - the only external dependency
 
 ## File structure
 
