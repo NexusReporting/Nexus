@@ -154,7 +154,7 @@ body.edit-mode .ef:focus{background:rgba(99,102,241,.12);border-bottom:1.5px sol
 .srch input::placeholder{color:var(--text3)}
 
 /* ── MAIN ─────────────────────────────────────────────────────────────── */
-.main{margin-left:var(--sw);margin-top:48px;padding:22px;min-height:calc(100vh - 48px);width:calc(100% - var(--sw))}
+.main{margin-left:var(--sw);margin-top:48px;padding:22px 22px 44px 22px;min-height:calc(100vh - 48px);width:calc(100% - var(--sw))}
 .sec{display:none;animation:fi .22s ease}
 .sec.on{display:block}
 @keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
@@ -357,6 +357,51 @@ body.edit-mode .ef:focus{background:rgba(99,102,241,.12);border-bottom:1.5px sol
 .bm-lbl{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--text3);letter-spacing:.06em}
 .bm-val{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:var(--text3)}
 @media(max-width:1100px){.kstrip{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:1fr 1fr}}
+
+/* ── TOOLTIP ─────────────────────────────────────────────────────────────── */
+.chart-tip{position:fixed;pointer-events:none;z-index:9999;background:var(--bg2);border:1px solid var(--border2);border-radius:8px;padding:8px 12px;font-family:'DM Mono',monospace;font-size:10px;color:var(--text);box-shadow:0 4px 20px rgba(0,0,0,.35);white-space:nowrap;opacity:0;transition:opacity .12s}
+.chart-tip.on{opacity:1}
+.chart-tip .tip-label{color:var(--text3);font-size:8px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.chart-tip .tip-val{font-size:14px;font-weight:700}
+
+/* ── UPDATED FOOTER ──────────────────────────────────────────────────────── */
+.data-footer{position:fixed;bottom:0;left:var(--sw);right:0;height:28px;background:var(--bg2);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);z-index:90;letter-spacing:.03em}
+.data-footer .foot-dot{width:6px;height:6px;border-radius:50%;background:var(--teal);display:inline-block;margin-right:6px;box-shadow:0 0 6px var(--teal)}
+
+/* ── MOBILE ──────────────────────────────────────────────────────────────── */
+.sb-toggle{display:none;position:fixed;top:10px;left:10px;z-index:200;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:18px;color:var(--text);cursor:pointer;line-height:1}
+@media(max-width:768px){
+  .sb{transform:translateX(-100%);transition:transform .25s ease;box-shadow:none}
+  .sb.open{transform:translateX(0);box-shadow:4px 0 30px rgba(0,0,0,.5)}
+  .sb-toggle{display:block}
+  .sb-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:99}
+  .sb-overlay.on{display:block}
+  main{margin-left:0!important;padding:14px 12px 48px 12px!important}
+  .data-footer{left:0}
+  .tb{padding-left:48px}
+  .kstrip{grid-template-columns:1fr 1fr!important}
+  .g3,.g4{grid-template-columns:1fr!important}
+  .card{padding:14px 12px}
+  canvas{max-height:140px}
+}
+@media(max-width:480px){
+  .kstrip{grid-template-columns:1fr!important}
+  .tb .bsm{font-size:9px;padding:4px 7px}
+}
+
+/* ── PRINT ───────────────────────────────────────────────────────────────── */
+@media print{
+  .sb,.tb,.data-footer,.sb-toggle,.sb-overlay,#nx-gate,#changelog-section,.bsm,.export-btn,#edit-toggle-btn{display:none!important}
+  main{margin-left:0!important;padding:0!important}
+  body{background:#fff;color:#000;font-size:11px;display:block}
+  .sec{display:none!important}
+  .sec.on{display:block!important;break-inside:avoid}
+  .card,.kc{border:1px solid #ddd;box-shadow:none;break-inside:avoid;page-break-inside:avoid}
+  .note{border-color:#ddd;color:#333}
+  :root{--bg:#fff;--bg2:#fff;--bg3:#f5f5f5;--card:#fff;--border:#ddd;--border2:#ccc;--text:#000;--text2:#333;--text3:#666;--px:#4f46e5;--px2:#6366f1;--teal:#059669;--gold:#d97706;--red:#dc2626}
+  canvas{max-width:100%!important}
+  .gcall{border-color:#ddd}
+}
 </style>
 </head>
 <body>
@@ -419,7 +464,7 @@ body.edit-mode .ef:focus{background:rgba(99,102,241,.12);border-bottom:1.5px sol
   },
 
   "targets": {
-    "_note": "Contractual PO handoff targets. Source: AWS program agreement.",
+    "_note": "Contractual PO handoff targets. Source: Program agreement.",
     "q1_target": 160,
     "q1_due": "Jun 12, 2026",
     "q1_delivered": 0,                    
@@ -529,6 +574,11 @@ const AG = ND.chart_age;
 </script>
 
 
+<!-- ═══════════════ MOBILE + TOOLTIP ═══════════════ -->
+<button class="sb-toggle" id="sb-toggle" aria-label="Toggle navigation">&#9776;</button>
+<div class="sb-overlay" id="sb-overlay"></div>
+<div class="chart-tip" id="chart-tip"><div class="tip-label"></div><div class="tip-val"></div></div>
+
 <!-- ═══════════════ SIDEBAR ═══════════════ -->
 <nav class="sb">
   <div class="sb-logo">
@@ -583,7 +633,7 @@ const AG = ND.chart_age;
 <section id="summary" class="sec on">
 
   <div class="shr">
-    <div class="shr-ey">Accenture Song · AWS/VMware Demand Program · Pilot Feb 2026 – Feb 2027</div>
+    <div class="shr-ey">Project Nexus · VMware Migration Demand Program · Pilot Feb 2026 – Feb 2027</div>
     <div class="shr-t">Summary</div>
     <div class="shr-s" id="summary-hero-sub"></div>
     <div class="shr-ks">
@@ -935,7 +985,7 @@ const AG = ND.chart_age;
             <div style="font-size:9px;color:var(--text3)">Guide</div>
           </div>
           <div style="flex:1">
-            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">VMware to AWS: Four Solutions That Build the Business Case</div>
+            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">VMware Migration: Four Solutions That Build the Business Case</div>
             <div style="font-size:10px;color:var(--text2);line-height:1.6">590 leads (63%) · 173,790 impressions · 294.6 imps/lead</div>
             <div style="margin-top:6px;height:5px;background:var(--bg3);border-radius:3px"><div style="width:63%;height:100%;background:var(--px);border-radius:3px;opacity:.85"></div></div>
           </div>
@@ -947,7 +997,7 @@ const AG = ND.chart_age;
             <div style="font-size:9px;color:var(--text3)">Solution Brief</div>
           </div>
           <div style="flex:1">
-            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">Low-Risk VMware Migration: Your Path and Timeline to AWS</div>
+            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">Low-Risk VMware Migration: Your Path and Timeline</div>
             <div style="font-size:10px;color:var(--text2);line-height:1.6">350 leads (37%) · 46,497 impressions · 132.8 imps/lead</div>
             <div style="margin-top:6px;height:5px;background:var(--bg3);border-radius:3px"><div style="width:37%;height:100%;background:var(--teal);border-radius:3px;opacity:.85"></div></div>
           </div>
@@ -961,15 +1011,15 @@ const AG = ND.chart_age;
         <div style="background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.2);border-radius:8px;padding:12px;text-align:center">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--teal)">940/940</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">Q5 Marketing Consent</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Receive marketing comms from Accenture in collab with AWS</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Receive marketing comms from the program team</div>
         </div>
         <div style="background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.2);border-radius:8px;padding:12px;text-align:center">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--teal)">940/940</div>
           <div style="font-size:10px;color:var(--text3);margin-top:2px">Q6 Joint Contact Consent</div>
-          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Accenture and AWS may contact and share data between parties</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Program partners may contact and share data between parties</div>
         </div>
       </div>
-      <div class="note">Full dual-consent coverage across all 940 leads. All are eligible for both Accenture and AWS outreach including NLPearl AI calls. No consent gaps to resolve before routing.</div>
+      <div class="note">Full dual-consent coverage across all 940 leads. All are eligible for program outreach including NLPearl AI calls. No consent gaps to resolve before routing.</div>
     </div>
   </div>
 
@@ -1102,13 +1152,13 @@ const AG = ND.chart_age;
         <div class="sig-name" style="font-size:10px">Pennsylvania</div><div style="text-align:right;font-weight:600;font-size:10px">28</div>
         <div class="sig-name" style="font-size:10px;color:var(--text3)">Remaining states</div><div style="text-align:right;font-size:10px;color:var(--text3)">348</div>
       </div>
-      <div class="note" style="margin-top:10px">CA (115), NY (99), and TX (86) form the top tier. VA (55) - heavy federal contractor presence - is strong for the AWS GovCloud angle. All 940 leads are US-only; no geographic consent issues.</div>
+      <div class="note" style="margin-top:10px">CA (115), NY (99), and TX (86) form the top tier. VA (55) has a heavy federal contractor presence, a strong fit for the GovCloud migration angle. All 940 leads are US-only; no geographic consent issues.</div>
     </div>
   </div>
 
   <!-- Campaign pacing summary -->
   <div class="card">
-    <div class="sl"><span>NetLine Campaign Pacing - AWS-73639 · Lead Sourcing Only</span></div>
+    <div class="sl"><span>NetLine Campaign Pacing · Lead Sourcing Only</span></div>
     <div class="al wa" style="margin-bottom:14px">
       <span class="al-i">&#9432;</span>
       <div class="al-t"><strong>This table reflects NetLine campaign-level lead sourcing pacing, not the contractual program handoff targets.</strong> Program PO delivery targets (Q1: 160, Q2: 225, Q3: 255, Q4: 260) are tracked separately under Targets &amp; Pace. These are leads entering the top of funnel, not qualified POs submitted to ACE.</div>
@@ -1579,7 +1629,7 @@ const AG = ND.chart_age;
 <section id="glossary" class="sec">
 
   <div class="shr">
-    <div class="shr-ey">Program Reference · Accenture Song / AWS</div>
+    <div class="shr-ey">Program Reference · Project Nexus</div>
     <div class="shr-t">Glossary - Terms, Acronyms, and Systems</div>
     <div class="shr-s">All key terms, acronyms, and systems referenced across the Nexus demand platform</div>
   </div>
@@ -1589,17 +1639,17 @@ const AG = ND.chart_age;
   <div class="gl-section" id="gls-program">
     <div class="gl-section-hd">Program and pipeline terms</div>
     <div class="gl-grid">
-      <div class="gl-item"><div class="gl-term">Nexus <span class="gl-tag t-prog">Program</span></div><div class="gl-def">The Accenture Song demand generation program built for AWS. Its goal is to generate and qualify VMware-to-AWS migration leads from Sub-Large Enterprise companies (fewer than 2,000 VMs) and hand them to the AWS sales team via the ACE pipeline. All infrastructure is Accenture-owned until the ACE handoff.</div></div>
+      <div class="gl-item"><div class="gl-term">Nexus <span class="gl-tag t-prog">Program</span></div><div class="gl-def">The Project Nexus demand generation program. Its goal is to generate and qualify VMware migration leads from Sub-Large Enterprise companies (fewer than 2,000 VMs) and hand them to the sales team via the ACE pipeline.</div></div>
       <div class="gl-item"><div class="gl-term">MEL <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Marketing Eligible Lead. A contact who has cleared the disqualification gate, has marketing consent, and has been classified as eligible for nurture or calling. MEL is a lifecycle stage in Eloqua, not a quality tier - it means the contact is in-program and routing has been assigned. Used for contacts with marketing consent who have not yet qualified for sales engagement.</div></div>
       <div class="gl-item"><div class="gl-term">MQP <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Marketing Qualified Pipeline. A MEL who has VMware confirmed, sales + AI consent, a phone number, and a timezone/state. MQPs are routed to NLPearl for AI outbound calling. Partial qualification data that does not meet threshold does not advance to MQP - the stage gates who gets called, not who is ultimately qualified.</div></div>
-      <div class="gl-item"><div class="gl-term">PO <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Partner Opportunity. A contact who has passed the ACE Readiness Gate: 100+ VMs, migration timeline under 18 months, and full sales + AI consent. POs are the deliverable handed to the AWS sales team via the ACE pipeline. Target for the full program is 900 POs over 4 quarters.</div></div>
-      <div class="gl-item"><div class="gl-term">ACE <span class="gl-tag t-sys">System</span></div><div class="gl-def">AWS Customer Engagement. The partner portal where Accenture registers qualified migration opportunities for the AWS sales team. ACE upload is currently a manual process - REST API automation is the target state. First ACE upload is being prepared as of May 26 by Connor, Ian, and Paulo. 0 POs uploaded to date.</div></div>
-      <div class="gl-item"><div class="gl-term">AIP+ <span class="gl-tag t-sys">System</span></div><div class="gl-def">Accenture Insights Platform Plus. Cloud-based analytics-as-a-service that serves as the cross-system signal unification layer for Nexus. AIP+ is the target destination for the ECID-to-Eloqua contact ID join, which is the #1 measurement infrastructure priority post-MVP.</div></div>
+      <div class="gl-item"><div class="gl-term">PO <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Partner Opportunity. A contact who has passed the ACE Readiness Gate: 100+ VMs, migration timeline under 18 months, and full sales + AI consent. POs are the deliverable handed to the sales team via the ACE pipeline. Target for the full program is 900 POs over 4 quarters.</div></div>
+      <div class="gl-item"><div class="gl-term">ACE <span class="gl-tag t-sys">System</span></div><div class="gl-def">The partner portal where qualified migration opportunities are registered for the sales team. ACE upload is currently a manual process - REST API automation is the target state. First ACE upload is being prepared as of May 26 by Connor, Ian, and Paulo. 0 POs uploaded to date.</div></div>
+      <div class="gl-item"><div class="gl-term">AIP+ <span class="gl-tag t-sys">System</span></div><div class="gl-def">Analytics-as-a-service platform (AIP+). Cloud-based that serves as the cross-system signal unification layer for Nexus. AIP+ is the target destination for the ECID-to-Eloqua contact ID join, which is the #1 measurement infrastructure priority post-MVP.</div></div>
       <div class="gl-item"><div class="gl-term">NLPearl <span class="gl-tag t-sys">System</span></div><div class="gl-def">AI-powered outbound voice agent that calls MQP-stage contacts. NLPearl conducts structured qualification conversations, captures VM count, migration timeline, and consent confirmation. Call results are written back to Eloqua as field updates that trigger MEL or PO routing.</div></div>
       <div class="gl-item"><div class="gl-term">ECID <span class="gl-tag t-sys">ID</span></div><div class="gl-def">Experience Cloud ID. Adobe's cross-device persistent identifier assigned by Adobe Analytics when a visitor lands on an AEM page. The ECID-to-Eloqua contact ID join is the critical missing link that would allow behavioral web data to be attributed to known contacts in Eloqua. Not yet implemented.</div></div>
-      <div class="gl-item"><div class="gl-term">MAP <span class="gl-tag t-prog">Program</span></div><div class="gl-def">Migration Acceleration Program. AWS's partner incentive program that provides funding and resources for customers migrating workloads to AWS. Nexus leads who qualify as POs may be eligible for MAP benefits, which the AWS sales team and migration partners manage after the ACE handoff.</div></div>
+      <div class="gl-item"><div class="gl-term">MAP <span class="gl-tag t-prog">Program</span></div><div class="gl-def">Migration Acceleration Program. A partner incentive program that provides funding and resources for customers migrating workloads. Nexus leads who qualify as POs may be eligible for MAP benefits, managed after the ACE handoff.</div></div>
       <div class="gl-item"><div class="gl-term">CTOR <span class="gl-tag t-met">Metric</span></div><div class="gl-def">Click-to-Open Rate. The percentage of email recipients who opened the email and then clicked a link. Calculated as clicks divided by unique opens. CTOR is a more reliable engagement signal than open rate alone because it filters out privacy-enabled auto-opens and measures intent among those who actually viewed the content.</div></div>
-      <div class="gl-item"><div class="gl-term">Sub-Large Enterprise <span class="gl-tag t-prog">Segment</span></div><div class="gl-def">Nexus's target customer segment: companies running fewer than 2,000 VMware VMs. These accounts are too large for the standard self-service AWS migration path but too small for the enterprise white-glove engagement model. The ~$20B TAM comes from this segment.</div></div>
+      <div class="gl-item"><div class="gl-term">Sub-Large Enterprise <span class="gl-tag t-prog">Segment</span></div><div class="gl-def">Nexus's target customer segment: companies running fewer than 2,000 VMware VMs. These accounts are too large for the standard self-service migration path but too small for the enterprise white-glove engagement model. The ~$20B TAM comes from this segment.</div></div>
       <div class="gl-item"><div class="gl-term">HQL <span class="gl-tag t-prog">Lead Type</span></div><div class="gl-def">Human-Qualified Lead. A lead type on the TechTarget / NetLine content syndication platform where a vendor representative has confirmed the lead's accuracy and relevance via a direct conversation before delivery. All 95 NetLine leads from the May 7–12 batch were HQL at lead score 4.</div></div>
       <div class="gl-item"><div class="gl-term">TechTarget <span class="gl-tag t-prog">Vendor</span></div><div class="gl-def">A B2B content syndication publisher similar to NetLine, used to distribute Nexus content assets to targeted IT audiences. Generates inbound leads with pre-captured marketing consent.</div></div>
       <div class="gl-item"><div class="gl-term">Adobe Launch <span class="gl-tag t-sys">System</span></div><div class="gl-def">The tag management layer used to deploy and manage Adobe Analytics tracking on AEM pages. Responsible for firing page view and event tracking including form interactions, clicks, and UTM capture. Adobe Launch intercepts UTM parameters on page load and persists them as cookies, making them available as dimensions within Adobe Analytics for attribution reporting. Required for enabling behavioral data collection feeding Adobe Analytics. Tagging work is owned by Allison Melendez's team.</div></div>
@@ -1628,6 +1678,15 @@ const AG = ND.chart_age;
       <div class="cl-head-row"><span>Timestamp</span><span>Field</span><span>Previous Value</span><span>New Value</span></div>
       <div id="cl-rows"></div>
     </div>
+  </div>
+</div>
+
+<!-- ═══════════════ DATA FOOTER ═══════════════ -->
+<div class="data-footer" id="data-footer">
+  <div><span class="foot-dot"></span>Data as of <span id="footer-date"></span></div>
+  <div style="display:flex;gap:12px;align-items:center">
+    <span id="footer-version"></span>
+    <button onclick="window.print()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 10px;color:var(--text3);font-family:'DM Mono',monospace;font-size:8px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase">Print Tab</button>
   </div>
 </div>
 
@@ -2166,7 +2225,7 @@ function populateFromData(){
   set('bmt-best-sub', 'Pickup rate - '+C.best_week_label+'. '+C.best_week_connected+' of '+C.best_week_attempts+' calls connected.');
 
   // Campaign hero
-  set('cs-hero-sub', 'AWS | Accenture AWS VMware Migration HQL · 2 offers · '+CA.total_leads+' NetLine leads received · '+CA.c_level_pct+'% C-Level · 100% dual consent · Program Q1 target: '+T.q1_target+' POs by '+T.q1_due);
+  set('cs-hero-sub', 'VMware Migration HQL · 2 offers · '+CA.total_leads+' NetLine leads received · '+CA.c_level_pct+'% C-Level · 100% dual consent · Program Q1 target: '+T.q1_target+' POs by '+T.q1_due);
   set('cs-q1-po',    T.q1_delivered+' / '+T.q1_target);
   set('cs-q1-sub',   'Due '+T.q1_due+' · '+T.q1_required_per_week+' POs/week required');
   set('cs-total-po', T.total_delivered+' / '+T.total_program_target);
@@ -2188,9 +2247,162 @@ window.addEventListener('load',()=>{
   buildTable();
   drawTrend();
   drawPickup();
+  initFooter();
+  initMobileNav();
+  initTooltips();
 });
 
 
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DATA FOOTER
+   ══════════════════════════════════════════════════════════════════════════ */
+function initFooter(){
+  const fd = document.getElementById('footer-date');
+  const fv = document.getElementById('footer-version');
+  if(fd) fd.textContent = M.report_as_of || M.report_date || '';
+  if(fv) fv.textContent = 'v' + (M.version || ND._version || '');
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE NAV
+   ══════════════════════════════════════════════════════════════════════════ */
+function initMobileNav(){
+  const toggle = document.getElementById('sb-toggle');
+  const sb = document.querySelector('.sb');
+  const overlay = document.getElementById('sb-overlay');
+  if(!toggle || !sb) return;
+
+  function openSb(){ sb.classList.add('open'); overlay.classList.add('on'); }
+  function closeSb(){ sb.classList.remove('open'); overlay.classList.remove('on'); }
+
+  toggle.addEventListener('click', ()=>{ sb.classList.contains('open') ? closeSb() : openSb(); });
+  overlay.addEventListener('click', closeSb);
+
+  // Close sidebar when a nav item is clicked on mobile
+  sb.querySelectorAll('.ni').forEach(n => n.addEventListener('click', ()=>{
+    if(window.innerWidth <= 768) closeSb();
+  }));
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   CHART TOOLTIPS
+   ══════════════════════════════════════════════════════════════════════════ */
+function initTooltips(){
+  const tip = document.getElementById('chart-tip');
+  if(!tip) return;
+  const tipLabel = tip.querySelector('.tip-label');
+  const tipVal = tip.querySelector('.tip-val');
+
+  function showTip(e, label, value, color){
+    tipLabel.textContent = label;
+    tipVal.textContent = value;
+    tipVal.style.color = color || 'var(--text)';
+    tip.classList.add('on');
+    const x = Math.min(e.clientX + 14, window.innerWidth - 180);
+    const y = Math.max(e.clientY - 50, 8);
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+  }
+  function hideTip(){ tip.classList.remove('on'); }
+
+  // Generic canvas hover helper
+  function addCanvasTooltip(canvasId, getHitData){
+    const el = document.getElementById(canvasId);
+    if(!el) return;
+    el.addEventListener('mousemove', function(e){
+      const rect = el.getBoundingClientRect();
+      const sx = el.width / rect.width;
+      const sy = el.height / rect.height;
+      const mx = (e.clientX - rect.left) * sx;
+      const my = (e.clientY - rect.top) * sy;
+      const hit = getHitData(mx, my, el.width, el.height);
+      if(hit) showTip(e, hit.label, hit.value, hit.color);
+      else hideTip();
+    });
+    el.addEventListener('mouseleave', hideTip);
+  }
+
+  // ── Trend chart (c-trend): MEL, MQP, PO by week
+  addCanvasTooltip('c-trend', function(mx, my, W, H){
+    const pad={t:14,r:14,b:24,l:34};
+    const cw=W-pad.l-pad.r;
+    const weeks=CT.weeks;
+    const colW=cw/weeks.length;
+    const idx=Math.floor((mx-pad.l)/colW);
+    if(idx<0||idx>=weeks.length) return null;
+    return {label:weeks[idx], value:'MEL: '+CT.mel[idx]+' / MQP: '+CT.mqp[idx]+' / PO: '+CT.po[idx], color:'var(--px2)'};
+  });
+
+  // ── Pickup chart (c-pickup): Rate % by week
+  addCanvasTooltip('c-pickup', function(mx, my, W, H){
+    const pad={t:14,r:14,b:24,l:34};
+    const cw=W-pad.l-pad.r;
+    const weeks=CP.weeks;
+    const colW=cw/weeks.length;
+    const idx=Math.floor((mx-pad.l)/colW);
+    if(idx<0||idx>=weeks.length) return null;
+    const rate=CP.rates[idx];
+    const col=rate>=15?'var(--teal)':rate>0?'var(--gold)':'var(--text3)';
+    return {label:weeks[idx], value:rate>0?rate+'% pickup rate':'No data', color:col};
+  });
+
+  // ── Age chart (c-age): Stage dwell times
+  addCanvasTooltip('c-age', function(mx, my, W, H){
+    const pad={t:20,r:14,b:40,l:100};
+    const ch=H-pad.t-pad.b;
+    const stages=[
+      {name:'Unknown', val:0, col:'#374151'},
+      {name:'Known', val:AG.known_h, col:'#818cf8'},
+      {name:'Validation', val:AG.validation_h, col:'#fbbf24'},
+      {name:'MEL', val:AG.mel_h, col:'#6366f1'},
+      {name:'PO', val:AG.po_h, col:'#f87171'}
+    ];
+    const bh=(ch/stages.length)*0.6, gap=(ch/stages.length)*0.4;
+    const idx=Math.floor((my-pad.t)/(bh+gap));
+    if(idx<0||idx>=stages.length) return null;
+    const s=stages[idx];
+    const sla = s.val > 24 ? ' (exceeds 24h SLA)' : '';
+    return {label:s.name+' Stage', value:s.val>0?s.val+'h avg dwell'+sla:'No data', color:s.col};
+  });
+
+  // ── Calls chart (c-calls): Attempts vs Connected
+  addCanvasTooltip('c-calls', function(mx, my, W, H){
+    const pad={t:20,r:14,b:28,l:38};
+    const cw=W-pad.l-pad.r;
+    const weeks=['Apr 13','Apr 20','Apr 27','May 4','May 12'];
+    const attempts=[0,56,183,0,0], connected=[0,0,44,0,0];
+    const colW=cw/weeks.length;
+    const idx=Math.floor((mx-pad.l)/colW);
+    if(idx<0||idx>=weeks.length) return null;
+    return {label:weeks[idx], value:'Attempts: '+attempts[idx]+' / Connected: '+connected[idx], color:'var(--px2)'};
+  });
+
+  // ── Burndown chart (c-burndown)
+  addCanvasTooltip('c-burndown', function(mx, my, W, H){
+    const pad={t:20,r:14,b:28,l:38};
+    const cw=W-pad.l-pad.r;
+    const wks=4;
+    const colW=cw/wks;
+    const idx=Math.floor((mx-pad.l)/colW);
+    if(idx<0||idx>=wks) return null;
+    const labels=['May 26','Jun 2','Jun 9','Jun 12'];
+    const ideal=[160,120,80,0];
+    const actual=[160,160,160,160]; // 0 delivered so remaining stays at 160
+    return {label:labels[idx], value:'Ideal remaining: '+ideal[idx]+' / Actual remaining: '+actual[idx], color:'var(--red)'};
+  });
+
+  // ── VM Size chart (c-vmsize)
+  addCanvasTooltip('c-vmsize', function(mx, my, W, H){
+    const pad={t:16,r:14,b:28,l:100};
+    const ch=H-pad.t-pad.b;
+    const data=[['100-249 VMs',74,78],['250-499 VMs',17,18],['1000-1999 VMs',4,4]];
+    const bh=(ch/data.length)*0.6, gap=(ch/data.length)*0.4;
+    const idx=Math.floor((my-pad.t)/(bh+gap));
+    if(idx<0||idx>=data.length) return null;
+    return {label:data[idx][0], value:data[idx][1]+' leads ('+data[idx][2]+'%)', color:'var(--px2)'};
+  });
+}
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT MODE - CHANGELOG - SAVE & EXPORT
