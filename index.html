@@ -1587,6 +1587,7 @@ function show(id){
     if(n.getAttribute('onclick')==="show('"+id+"')") n.classList.add('on');
   });
   requestAnimationFrame(()=>{ drawChartsFor(id); });
+  if(id==='glossary') initGlossarySearch();
 }
 
 /* ── THEME ─────────────────────────────────────────────────────────────── */
@@ -2132,12 +2133,7 @@ window.addEventListener('load',()=>{
   drawPickup();
 });
 
-// Listen for show('glossary') and init search
-const origShow=window.show;
-window.show=function(id){
-  origShow.call(this,id);
-  if(id==='glossary') initGlossarySearch();
-};
+
 
 /* ══════════════════════════════════════════════════════════════════════════
    EDIT MODE — CHANGELOG — SAVE & EXPORT
