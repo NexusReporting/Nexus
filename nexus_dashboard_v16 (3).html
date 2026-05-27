@@ -1,0 +1,2503 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Nexus — Measurement Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ─────────────────────────────────────────────────────────────── */
+:root{
+  --bg:#09090e;--bg2:#0f0f18;--bg3:#141425;
+  --card:#0f0f18;--border:#1e1e2e;--border2:#2a2a3e;
+  --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+  --px:#6366f1;--px2:#818cf8;--px3:#a5b4fc;
+  --glow:rgba(99,102,241,.14);
+  --teal:#00e5c0;--gold:#fbbf24;--red:#f87171;
+  --fact:#00e5c0;--fact-bg:rgba(0,229,192,.07);--fact-b:rgba(0,229,192,.25);
+  --infer:#fbbf24;--infer-bg:rgba(251,191,36,.07);--infer-b:rgba(251,191,36,.25);
+  --alert:#f87171;--alert-bg:rgba(248,113,113,.07);--alert-b:rgba(248,113,113,.25);
+  --sw:252px;--r:12px;
+  --sh:0 4px 24px rgba(0,0,0,.35);
+  --tr:all .2s ease;
+}
+[data-theme=light]{
+  --bg:#f5f5f8;--bg2:#fff;--bg3:#f0edf8;
+  --card:#fff;--border:#e2e0ef;--border2:#ccc9e0;
+  --text:#0d0820;--text2:#4a3f6b;--text3:#8b7aaa;
+  --px:#4f46e5;--px2:#6366f1;--px3:#818cf8;
+  --glow:rgba(79,70,229,.10);
+  --teal:#059669;--gold:#d97706;--red:#dc2626;
+  --fact:#059669;--fact-bg:#f0fdf4;--fact-b:#bbf7d0;
+  --infer:#d97706;--infer-bg:#fffbeb;--infer-b:#fde68a;
+  --alert:#dc2626;--alert-bg:#fef2f2;--alert-b:#fecaca;
+  --sh:0 4px 24px rgba(79,70,229,.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;font-size:13px}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── SIDEBAR ─────────────────────────────────────────────────────────────── */
+.sb{width:var(--sw);height:100vh;background:var(--bg2);border-right:1px solid var(--border);position:fixed;top:0;left:0;z-index:100;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--px) transparent}
+.sb-logo{padding:16px 14px 12px;border-bottom:1px solid var(--border)}
+.sb-logo .lt{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.07em;color:var(--text);line-height:1}
+.sb-logo .ls{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-top:3px}
+.ns{padding:6px 0}
+.nsl{font-family:'DM Mono',monospace;font-size:8px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:1.2px;padding:6px 14px 3px}
+.ni{display:flex;align-items:center;gap:8px;padding:6px 14px;cursor:pointer;border-radius:8px;margin:1px 5px;transition:var(--tr);font-size:11.5px;font-weight:500;color:var(--text2)}
+.ni:hover,.ni.on{background:var(--glow);color:var(--px)}
+.ni .ic{font-size:12px;width:15px;text-align:center;flex-shrink:0}
+.nb{margin-left:auto;background:var(--px);color:#fff;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;padding:2px 5px;border-radius:8px}
+.nb.r{background:var(--red)}.nb.o{background:var(--gold)}.nb.g{background:var(--fact)}
+
+/* ── TOPBAR ─────────────────────────────────────────────────────────────── */
+.tb{position:fixed;top:0;left:var(--sw);right:0;height:48px;background:var(--card);border-bottom:1px solid var(--border);z-index:99;display:flex;align-items:center;padding:0 20px;gap:12px}
+.tb-t{font-size:12px;font-weight:700;color:var(--text)}
+.tb-m{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-left:auto}
+.bsm{padding:4px 11px;border-radius:7px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg2);color:var(--text2);transition:var(--tr)}
+.bsm:hover{background:var(--glow);color:var(--px);border-color:var(--px)}
+.bsm.pr{background:var(--px);color:#fff;border-color:var(--px)}
+.bsm.pr:hover{opacity:.9}
+.bsm.edit-on{background:#d97706;color:#fff;border-color:#d97706}
+.bsm.edit-on:hover{opacity:.9}
+.bsm.export-btn{background:var(--teal);color:#000;border-color:var(--teal);display:none}
+.bsm.export-btn:hover{opacity:.85}
+
+/* ── EDIT MODE ─────────────────────────────────────────────────────────── */
+body.edit-mode .card{box-shadow:0 0 0 1.5px rgba(99,102,241,.35),var(--sh)}
+body.edit-mode .card:hover{box-shadow:0 0 0 2px rgba(99,102,241,.6),var(--sh)}
+.ef{background:transparent;border:none;outline:none;font:inherit;color:inherit;width:100%;padding:0;margin:0;cursor:text;resize:none;font-family:inherit;font-size:inherit;line-height:inherit}
+body:not(.edit-mode) .ef{pointer-events:none}
+body.edit-mode .ef{background:rgba(99,102,241,.07);border-bottom:1px dashed rgba(99,102,241,.5);border-radius:3px 3px 0 0;padding:1px 3px;cursor:text}
+body.edit-mode .ef:focus{background:rgba(99,102,241,.12);border-bottom:1.5px solid var(--px);outline:none}
+.ef-num{width:4em;text-align:right}
+.ef-pct{width:3.5em;text-align:right}
+
+/* ── CHANGELOG ─────────────────────────────────────────────────────────── */
+#changelog-section{display:none;margin:18px 22px 30px;animation:fi .22s ease}
+#changelog-section.visible{display:block}
+.cl-header{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--px);margin-bottom:10px}
+.cl-empty{font-size:11px;color:var(--text3);font-style:italic}
+.cl-row{display:grid;grid-template-columns:140px 180px 1fr 1fr;gap:8px;padding:7px 10px;border-bottom:1px solid var(--border);font-size:10.5px;align-items:start}
+.cl-row:last-child{border-bottom:none}
+.cl-row:hover{background:var(--bg2)}
+.cl-ts{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)}
+.cl-field{font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)}
+.cl-old{color:var(--red);text-decoration:line-through}
+.cl-new{color:var(--teal);font-weight:600}
+.cl-head-row{display:grid;grid-template-columns:140px 180px 1fr 1fr;gap:8px;padding:5px 10px;font-family:'DM Mono',monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border);border-radius:var(--r) var(--r) 0 0}
+
+/* ── TOAST ──────────────────────────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;right:24px;background:var(--teal);color:#000;font-family:'DM Mono',monospace;font-size:11px;font-weight:700;padding:10px 18px;border-radius:9px;box-shadow:0 4px 20px rgba(0,0,0,.3);opacity:0;pointer-events:none;transition:opacity .3s ease;z-index:999}
+#toast.show{opacity:1}
+.srch{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:4px 9px}
+.srch input{background:none;border:none;outline:none;font-size:11px;color:var(--text);width:180px;font-family:'DM Sans',sans-serif}
+.srch input::placeholder{color:var(--text3)}
+
+/* ── MAIN ─────────────────────────────────────────────────────────────── */
+.main{margin-left:var(--sw);margin-top:48px;padding:22px;min-height:calc(100vh - 48px);width:calc(100% - var(--sw))}
+.sec{display:none;animation:fi .22s ease}
+.sec.on{display:block}
+@keyframes fi{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+
+/* ── HERO ─────────────────────────────────────────────────────────────── */
+@keyframes hg{0%,100%{background-position:0% 60%}50%{background-position:100% 40%}}
+.shr{
+  background:#1e1e8f;
+  background-size:100% 100%;
+  border-radius:var(--r);padding:22px 26px;margin-bottom:18px;color:#fff;
+  position:relative;overflow:hidden;
+  border:1px solid rgba(99,102,241,.35);
+  box-shadow:0 8px 40px rgba(99,102,241,.25);
+}
+.shr::before{content:'';position:absolute;inset:0;
+  background-image:none;
+  background-size:100% 100%;z-index:0}
+.shr::after{content:'';position:absolute;top:-40%;right:-4%;width:250px;height:250px;
+  background:none;
+  border-radius:50%;z-index:0}
+.shr-ey,.shr-t,.shr-s,.shr-ks{position:relative;z-index:1}
+.shr-ey{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:2px;opacity:.7;margin-bottom:7px;display:flex;align-items:center;gap:8px}
+.shr-ey::before{content:'';display:inline-block;width:18px;height:1px;background:rgba(255,255,255,.6);border-radius:1px;flex-shrink:0}
+.shr-t{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:.05em;line-height:1.1;color:#fff}
+.shr-s{font-size:11px;opacity:.75;margin-top:5px;line-height:1.5;color:#e2e8f0}
+.shr-ks{display:flex;gap:18px;margin-top:12px;flex-wrap:wrap}
+.shr-k{text-align:center}
+.shr-kv{font-family:'Bebas Neue',sans-serif;font-size:22px;color:#fff}
+.shr-kl{font-size:9px;opacity:.65;margin-top:1px;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
+
+/* ── CARDS ─────────────────────────────────────────────────────────────── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:18px;box-shadow:var(--sh);transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card.hi{border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.04)}
+.card.warn{border-color:rgba(248,113,113,.22);background:rgba(248,113,113,.04)}
+.card.teal-hi{border-color:rgba(0,229,192,.3);background:rgba(0,229,192,.04)}
+.card.gold-hi{border-color:rgba(251,191,36,.3);background:rgba(251,191,36,.04)}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ct{font-size:12px;font-weight:700;color:var(--text)}
+.cs{font-size:9px;color:var(--text3);margin-top:1px}
+
+/* ── GRIDS ─────────────────────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+.g14{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px}
+
+/* ── KPI STRIP ─────────────────────────────────────────────────────────── */
+.kstrip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.kc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px;cursor:pointer;transition:var(--tr);position:relative;overflow:hidden}
+.kc::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--glow),transparent);opacity:0;transition:var(--tr)}
+.kc:hover::before{opacity:1}
+.kc:hover{border-color:var(--px);transform:translateY(-2px)}
+.ke{font-family:'DM Mono',monospace;font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text3)}
+.kv{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--px);line-height:1.05;margin:4px 0 2px}
+.kl{font-size:10px;color:var(--text2);font-weight:500}
+.kd{font-size:9px;font-weight:600;margin-top:2px}
+.kd.up{color:var(--fact)}.kd.dn{color:var(--alert)}
+
+/* ── SEC LABEL ─────────────────────────────────────────────────────────── */
+.sl{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.sl::before{content:'';display:block;width:3px;height:14px;background:var(--px);border-radius:2px;box-shadow:0 0 8px var(--px);flex-shrink:0}
+.sl span{font-family:'DM Mono',monospace;font-size:9px;color:var(--px);letter-spacing:.15em;text-transform:uppercase}
+
+/* ── DOT STATUS ─────────────────────────────────────────────────────────── */
+.dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.dot.ok{background:var(--teal);box-shadow:0 0 5px var(--teal)}
+.dot.gap{background:var(--red);box-shadow:0 0 5px var(--red)}
+.dot.warn{background:var(--gold);box-shadow:0 0 5px var(--gold)}
+.kpi-meta{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center}
+
+/* ── PILLS ─────────────────────────────────────────────────────────────── */
+.pill{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-family:'DM Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.3px}
+.p-ok{background:var(--fact-bg);color:var(--fact);border:1px solid var(--fact-b)}
+.p-warn{background:var(--infer-bg);color:var(--infer);border:1px solid var(--infer-b)}
+.p-gap{background:var(--alert-bg);color:var(--alert);border:1px solid var(--alert-b)}
+.p-live{background:var(--glow);color:var(--px);border:1px solid rgba(99,102,241,.3)}
+.p-muted{background:rgba(100,116,139,.1);color:var(--text3);border:1px solid var(--border)}
+
+/* ── TABLES ─────────────────────────────────────────────────────────────── */
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{padding:8px 10px;text-align:left;font-family:'DM Mono',monospace;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text3);background:var(--bg3);border-bottom:1px solid var(--border)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:top;line-height:1.5}
+.tbl tr:hover td{background:var(--bg2)}
+.tbl td:first-child{font-family:'DM Mono',monospace;color:var(--px2);font-size:10px}
+.tw{overflow-x:auto;border-radius:var(--r);border:1px solid var(--border)}
+
+/* ── PROGRESS ─────────────────────────────────────────────────────────── */
+.pr-r{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.pr-l{font-size:10px;font-weight:600;color:var(--text2);width:160px;flex-shrink:0}
+.pr-b{flex:1;height:6px;background:var(--bg3);border-radius:3px;overflow:hidden}
+.pr-f{height:100%;border-radius:3px;background:var(--px);transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.pr-v{font-family:'DM Mono',monospace;font-size:10px;font-weight:700;color:var(--px);width:40px;text-align:right;flex-shrink:0}
+
+/* ── SIGNAL BARS ─────────────────────────────────────────────────────── */
+.sig-row{display:flex;align-items:center;gap:10px;margin-bottom:11px}
+.sig-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.sig-name{font-size:11px;color:var(--text);flex:1}
+.sig-pts{font-family:'DM Mono',monospace;font-size:10px;min-width:40px;text-align:right}
+.sig-tr{flex:2;height:5px;background:var(--bg3);border-radius:3px}
+.sig-fi{height:100%;border-radius:3px}
+
+/* ── LIFECYCLE FLOW ─────────────────────────────────────────────────── */
+.lf-flow{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:8px}
+.lf-stage{flex:1;min-width:110px;position:relative}
+.lf-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 11px;margin-right:6px;transition:border-color .2s}
+.lf-box:hover{box-shadow:0 0 14px rgba(99,102,241,.18)}
+.lf-arrow{display:flex;align-items:center;padding:0 2px;color:var(--text3);font-size:14px;flex-shrink:0;margin-top:26px;align-self:flex-start}
+.lf-code{font-family:'DM Mono',monospace;font-size:8px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:5px}
+.lf-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:4px}
+.lf-wip{font-family:'Bebas Neue',sans-serif;font-size:18px;line-height:1;margin-bottom:2px}
+.lf-sub{font-size:9px;color:var(--text3);font-family:'DM Mono',monospace}
+.age-badge{display:inline-block;font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;border-radius:7px;margin-bottom:4px}
+.age-ok{background:rgba(0,229,192,.12);color:var(--teal);border:1px solid rgba(0,229,192,.3)}
+.age-warn{background:rgba(251,191,36,.12);color:var(--gold);border:1px solid rgba(251,191,36,.3)}
+.age-hot{background:rgba(248,113,113,.12);color:var(--red);border:1px solid rgba(248,113,113,.3)}
+
+/* ── GATE ─────────────────────────────────────────────────────────────── */
+.gate{background:var(--bg3);border-left:3px solid var(--px);border-radius:0 8px 8px 0;padding:12px 14px;margin-bottom:10px}
+.gate-title{font-family:'DM Mono',monospace;font-size:8px;color:var(--px);text-transform:uppercase;letter-spacing:.12em;margin-bottom:7px}
+.gate-rule{font-size:11px;color:var(--text2);padding:3px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.gate-rule:last-child{border-bottom:none}
+.gate-rule::before{content:'';color:var(--px);flex-shrink:0;font-size:9px;margin-top:2px}
+
+/* ── GAP CALLOUT ─────────────────────────────────────────────────────── */
+.gcall{background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.22);border-radius:10px;padding:13px 16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.gcall-dot{width:7px;height:7px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);flex-shrink:0;margin-top:5px}
+.gcall-lbl{font-family:'DM Mono',monospace;font-size:9px;color:var(--red);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px}
+.gcall-txt{font-size:11px;color:var(--text2);line-height:1.65}
+
+/* ── NOTE BAR ─────────────────────────────────────────────────────────── */
+.note{font-family:'DM Mono',monospace;font-size:10px;color:var(--text3);padding-top:10px;border-top:1px solid var(--border);line-height:1.7;margin-top:12px}
+
+/* ── ALERT BOX ─────────────────────────────────────────────────────────── */
+.al{background:var(--alert-bg);border:1px solid var(--alert-b);border-radius:9px;padding:10px 14px;display:flex;align-items:flex-start;gap:8px;margin-bottom:12px}
+.al.wa{background:var(--infer-bg);border-color:var(--infer-b)}
+.al.ok{background:var(--fact-bg);border-color:var(--fact-b)}
+.al-i{font-size:13px;flex-shrink:0;margin-top:1px}
+.al-t{font-size:11px;color:var(--text2);line-height:1.5}
+.al-t strong{color:var(--text)}
+
+/* ── DIVIDER ─────────────────────────────────────────────────────────── */
+.dv{height:1px;background:var(--border);margin:16px 0}
+
+/* ── Q-CARD ─────────────────────────────────────────────────────────── */
+.qc{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px}
+.qc.cur{background:rgba(99,102,241,.06);border-color:rgba(99,102,241,.35)}
+.q-badge{font-family:'DM Mono',monospace;font-size:8px;padding:2px 6px;border-radius:9px;text-transform:uppercase;letter-spacing:.08em}
+.q-badge.active{background:rgba(99,102,241,.15);color:var(--px)}
+.q-badge.upcoming{background:rgba(100,116,139,.12);color:var(--text3)}
+.ql{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:.05em;color:var(--px)}
+.qd{font-family:'Bebas Neue',sans-serif;font-size:30px;line-height:1;color:var(--text)}
+.qmeta{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:3px}
+.qpace{font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);margin-top:2px}
+
+/* ── ATRITION ROW ─────────────────────────────────────────────────────── */
+.atr-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)}
+.atr-row:last-child{border-bottom:none}
+.atr-pct{font-family:'Bebas Neue',sans-serif;font-size:18px;text-align:right}
+
+/* ── GLOSSARY ─────────────────────────────────────────────────────────── */
+.gl-search{width:100%;background:var(--card);border:1px solid var(--border2);border-radius:10px;padding:9px 14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:12px;outline:none;transition:border-color .2s;margin-bottom:20px}
+.gl-search:focus{border-color:var(--px)}
+.gl-search::placeholder{color:var(--text3)}
+.gl-section{margin-bottom:28px}
+.gl-section-hd{font-family:'DM Mono',monospace;font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:var(--px);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.gl-section-hd::before{content:'';display:block;width:20px;height:1px;background:var(--px);box-shadow:0 0 5px var(--px)}
+.gl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:10px}
+.gl-item{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:13px 15px;transition:border-color .2s}
+.gl-item:hover{border-color:var(--border2)}
+.gl-item.hidden{display:none}
+.gl-term{font-family:'DM Mono',monospace;font-size:10px;color:var(--px2);font-weight:500;margin-bottom:5px;display:flex;align-items:center;gap:8px}
+.gl-tag{font-size:8.5px;padding:1px 6px;border-radius:7px;letter-spacing:.06em;text-transform:uppercase}
+.gl-tag.t-prog{background:rgba(99,102,241,.12);color:var(--px2);border:1px solid rgba(99,102,241,.25)}
+.gl-tag.t-sys{background:rgba(0,229,192,.1);color:var(--teal);border:1px solid rgba(0,229,192,.25)}
+.gl-tag.t-met{background:rgba(251,191,36,.1);color:var(--gold);border:1px solid rgba(251,191,36,.25)}
+.gl-tag.t-bench{background:rgba(248,113,113,.1);color:var(--red);border:1px solid rgba(248,113,113,.25)}
+.gl-def{font-size:11px;color:var(--text2);line-height:1.65}
+
+/* ── CHECKLIST ─────────────────────────────────────────────────────────── */
+.chk-row{display:grid;grid-template-columns:20px 1fr 110px;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}
+.chk-row:last-child{border-bottom:none}
+
+/* ── BENCHMARK TILE ─────────────────────────────────────────────────────── */
+.bmt{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 11px;text-align:center}
+.bmt-lbl{font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.bmt-val{font-family:'Bebas Neue',sans-serif;font-size:24px;color:var(--text2)}
+.bmt-sub{font-size:9px;color:var(--text3);margin-top:3px;line-height:1.45}
+
+/* ── MATRIX TABLE ─────────────────────────────────────────────────────── */
+.matrix{border-collapse:collapse;width:100%;font-size:11px}
+.matrix th,.matrix td{padding:8px 11px;border:1px solid var(--border);text-align:left;vertical-align:top}
+.matrix th{background:rgba(99,102,241,.08);font-family:'DM Mono',monospace;font-size:8.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--text2)}
+.matrix td{color:var(--text2)}
+.matrix td:first-child{font-family:'DM Mono',monospace;color:var(--px2);font-size:10px}
+.matrix tr:hover td{background:rgba(255,255,255,.02)}
+
+/* ── BENCHMARK FOOTER ────────────────────────────────────────────────────── */
+.bm{margin-top:8px;padding-top:7px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:baseline}
+.bm-lbl{font-family:'DM Mono',monospace;font-size:8.5px;color:var(--text3);letter-spacing:.06em}
+.bm-val{font-family:'DM Mono',monospace;font-size:9px;font-weight:700;color:var(--text3)}
+@media(max-width:1100px){.kstrip{grid-template-columns:repeat(3,1fr)}.g3{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     NEXUS DASHBOARD — DATA BLOCK
+     ═══════════════════════════════════════════════════════════════════════
+     HOW TO UPDATE:
+       1. Find this block (search for "NEXUS DASHBOARD — DATA BLOCK")
+       2. Edit the values below in any text editor
+       3. Save the file
+       4. Upload to SharePoint (overwrite the existing file)
+       5. The dashboard will re-render automatically when reopened
+
+     FIELD GUIDE — each field is annotated with where it appears
+     ═══════════════════════════════════════════════════════════════════════ -->
+<script id="nexus-data" type="application/json">
+{
+  "_version": 15,
+
+  "meta": {
+    "version": 15,                        
+    "report_date": "May 26, 2026",        
+    "report_as_of": "As of May 26, 2026", 
+    "topbar_label": "MVP Launch \u00b7 As of May 26, 2026",
+    "q1_weeks_remaining": 2,              
+    "revenue_assumption_per_vm": 2500,    
+    "revenue_assumption_label": "$2,500 = 1 VM migrated (program-standard assumption)"
+  },
+
+  "funnel": {
+    "_note": "Source: Eloqua. Updated by Allison each week.",
+    "total_in_funnel": 264,               
+    "eloqua_pipeline": 169,               
+    "cs_intake_recent": 95,               
+    "cs_intake_label": "May 7\u201312",  
+
+    "stage_known_wip": 16,                
+    "stage_known_alltime": 71,            
+    "stage_known_avg_age_h": 19.2,        
+
+    "stage_validation_wip": 28,           
+    "stage_validation_alltime": 70,       
+    "stage_validation_avg_age_h": 28.8,   
+
+    "stage_mel_wip": 43,                  
+    "stage_mel_alltime": 41,              
+    "stage_mel_avg_age_h": 9.6,           
+
+    "stage_po_wip": 0,                    
+    "stage_po_alltime": 0,                
+
+    "recycled": 1,                        
+    "disqualified": 0,                    
+
+    "attrition_unknown_to_known": [153, 71],     
+    "attrition_known_to_validation": [71, 70],   
+    "attrition_validation_to_mel": [70, 41],     
+    "attrition_mel_to_po": [41, 0]               
+  },
+
+  "targets": {
+    "_note": "Contractual PO handoff targets. Source: AWS program agreement.",
+    "q1_target": 160,
+    "q1_due": "Jun 12, 2026",
+    "q1_delivered": 0,                    
+    "q1_required_per_week": 40,           
+
+    "q2_target": 225,
+    "q2_due": "Sep 11, 2026",
+    "q2_delivered": 0,
+
+    "q3_target": 255,
+    "q3_due": "Dec 11, 2026",
+    "q3_delivered": 0,
+
+    "q4_target": 260,
+    "q4_due": "Feb 20, 2027",
+    "q4_delivered": 0,
+
+    "total_program_target": 900,
+    "total_delivered": 0
+  },
+
+  "calls": {
+    "_note": "Source: NLPearl exports. Updated by Daniel each week.",
+    "total_attempts": 239,                
+    "best_week_label": "Apr 27 week",     
+    "best_week_attempts": 183,            
+    "best_week_connected": 44,            
+    "pickup_rate_pct": 24,                
+    "sla_compliance_pct": 100,            
+    "avg_duration_min": null,             
+
+    "signal_strong": 17,                  
+    "signal_weak": 20,                    
+    "signal_negative": 0,                 
+    "signal_no_connect": 6,               
+    "avg_duration_min": null,             
+    "opt_outs": null,                     
+    "avg_sentiment": null,                
+    "credits_used": null                  
+  },
+
+  "campaign": {
+    "_note": "Source: TechTarget/NetLine batch files. Updated by Justin when new batch arrives.",
+    "total_leads": 940,
+    "report_period": "May 7\u201326, 2026",
+    "spend_to_date": 79900,
+    "budget_total": 99960,
+    "budget_remaining": 20060,
+    "cpl": 85,
+    "email_opted_out_flag": true,
+    "email_opted_out_note": "Pending confirmation with Allison \u2014 all 438 Batch 2 contacts flagged TRUE",
+
+    "offer_1_id": "w_awsi224",
+    "offer_1_leads": 590,
+    "offer_1_impressions": 173790,
+
+    "offer_2_id": "w_awsi225",
+    "offer_2_leads": 350,
+    "offer_2_impressions": 46497,
+
+    "consent_q5_pct": 100,
+    "consent_q6_pct": 100,
+    "c_level_pct": 66
+  },
+
+  "gaps": {
+    "_note": "Free-text fields. Update when open items change status.",
+    "summary_hero_subtitle": "264 contacts in funnel \u00b7 0 POs delivered \u00b7 17 Strong AI call signals \u00b7 First ACE upload being prepped \u00b7 95 NetLine leads received May 7\u201312",
+    "open_gaps_text": "0 POs to ACE as of May 26 \u2014 first ACE upload being prepped by Connor, Ian, and Paulo this week. 940 NetLine campaign leads received May 7\u201326 \u2014 pending Eloqua intake and qualification routing. Finance spend feed unconfirmed \u2014 ROI, Cost Per PO, and all CPL/CPC metrics not yet calculable. Thank-you page conversion pixel missing. ECID to Eloqua contact ID join not implemented. Eloqua consent and scoring QA in progress \u2014 full program launch targeting June 1. Lead scoring interest/behavior layer not yet active \u2014 MVP runs on fit (demographic) scoring only. Paulo rolling off May 22 \u2014 knowledge transfer to Daniel in progress.",
+    "ai_section_hero_sub": "239 total attempts \u00b7 24% peak pickup rate \u00b7 100% SLA compliance \u00b7 17 Strong signals, 0 converted to PO",
+    "ace_upload_status": "In prep \u2014 Connor, Ian, Paulo",
+    "po_bottleneck_note": "17 Strong signal calls, 0 POs. First ACE upload being prepped by Connor, Ian, and Paulo as of May 26. Execution will establish initial velocity and confirm structured data flow from NLPearl."
+  },
+
+  "chart_trend": {
+    "_note": "Append one value to each array each week. weeks label = week starting date.",
+    "weeks": ["Apr 13", "Apr 20", "Apr 27", "May 4", "May 12"],
+    "mel":   [0, 0, 41, 41, 41],
+    "mqp":   [0, 30, 70, 70, 43],
+    "po":    [0, 0, 0, 0, 0]
+  },
+
+  "chart_pickup": {
+    "_note": "Pickup rate % per week. Append each week. 0 = no data that week.",
+    "weeks": ["Apr 13", "Apr 20", "Apr 27", "May 4", "May 12"],
+    "rates": [0, 0, 24, 0, 0]
+  },
+
+  "chart_age": {
+    "_note": "Average hours per stage. Update weekly from Eloqua stage age report.",
+    "known_h": 19.2,
+    "validation_h": 28.8,
+    "mel_h": 9.6,
+    "po_h": 0
+  }
+}
+</script>
+
+<script>
+/* ── LOAD DATA BLOCK ─────────────────────────────────────────────────────── */
+const ND = JSON.parse(document.getElementById('nexus-data').textContent);
+const M  = ND.meta;
+const F  = ND.funnel;
+const T  = ND.targets;
+const C  = ND.calls;
+const CA = ND.campaign;
+const G  = ND.gaps;
+const CT = ND.chart_trend;
+const CP = ND.chart_pickup;
+const AG = ND.chart_age;
+</script>
+
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<nav class="sb">
+  <div class="sb-logo">
+    <div class="lt">Project Nexus</div>
+    <div class="ls">Measurement Dashboard · MVP Launch · May 2026</div>
+  </div>
+
+  <div class="ns">
+    <div class="nsl">Program Overview</div>
+    <div class="ni on" onclick="show('summary')">Summary<span class="nb r">Live</span></div>
+    <div class="ni" onclick="show('targets')">Targets &amp; Pace<span class="nb r">Behind</span></div>
+  </div>
+
+  <div class="ns">
+    <div class="nsl">Funnel Intelligence</div>
+    <div class="ni" onclick="show('funnel')">Funnel + Age</div>
+  </div>
+
+  <div class="ns">
+    <div class="nsl">Channel Data</div>
+    <div class="ni" onclick="show('ai')">AI Calls (NLPearl)<span class="nb g" id="sb-pickup-badge"></span></div>
+    <div class="ni" onclick="show('cs')">Campaign Reporting<span class="nb">940 Leads</span></div>
+    <div class="ni" onclick="show('email')">Email</div>
+    <div class="ni" onclick="show('web')">Web</div>
+  </div>
+
+  <div class="ns">
+    <div class="nsl">Reference</div>
+    <div class="ni" onclick="show('cip')">Improvement Plan</div>
+    <div class="ni" onclick="show('scoring')">Lead Scoring</div>
+    <div class="ni" onclick="show('register')">Metric Register</div>
+    <div class="ni" onclick="show('glossary')">Glossary</div>
+  </div>
+</nav>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<div class="tb">
+  <span class="tb-t">Project Nexus — Measurement Dashboard</span>
+  <div class="srch"><span style="color:var(--text3);font-size:11px">&#128269;</span><input id="gs" placeholder="Search..." oninput="gSearch(this.value)" onblur="if(!this.value)document.querySelectorAll('.ni').forEach(n=>n.style.opacity='')"></div>
+  <span class="tb-m" id="tb-date"></span>
+  <button class="bsm" onclick="tDark()">&#9681; Theme</button>
+  <button class="bsm" id="edit-toggle-btn" onclick="toggleEditMode()">&#9998; Edit Mode</button>
+  <button class="bsm export-btn" id="export-btn" onclick="saveAndExport()">&#8681; Save &amp; Export</button>
+  <button class="bsm pr" onclick="show('targets')">Targets</button>
+</div>
+<div id="toast">Exported successfully</div>
+
+<!-- ═══════════════ MAIN CONTENT ═══════════════ -->
+<main class="main">
+
+<!-- ═══════════════ SUMMARY ═══════════════ -->
+<section id="summary" class="sec on">
+
+  <div class="shr">
+    <div class="shr-ey">Accenture Song · AWS/VMware Demand Program · Pilot Feb 2026 – Feb 2027</div>
+    <div class="shr-t">Summary</div>
+    <div class="shr-s" id="summary-hero-sub"></div>
+    <div class="shr-ks">
+      <div class="shr-k"><div class="shr-kv" id="hero-funnel"></div><div class="shr-kl">Funnel Volume</div></div>
+      <div class="shr-k" style="opacity:.3">|</div>
+      <div class="shr-k"><div class="shr-kv" id="hero-po"></div><div class="shr-kl">POs to ACE</div></div>
+      <div class="shr-k" style="opacity:.3">|</div>
+      <div class="shr-k"><div class="shr-kv" id="hero-pickup"></div><div class="shr-kl">AI Pickup Rate</div></div>
+      <div class="shr-k" style="opacity:.3">|</div>
+      <div class="shr-k"><div class="shr-kv" id="hero-sla"></div><div class="shr-kl">Speed-to-Call SLA</div></div>
+      <div class="shr-k" style="opacity:.3">|</div>
+      <div class="shr-k"><div class="shr-kv">~$20B</div><div class="shr-kl">Program TAM</div></div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card">
+      <div class="kpi-meta">MET001 <span class="dot ok"></span></div>
+      <div class="kv" id="kpi-funnel-vol"></div>
+      <div class="kl">Funnel Volume — WIP + CS Intake</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px" id="kpi-funnel-sub"></div>
+      <div class="bm"><span class="bm-lbl">B2B lead-to-MQL benchmark</span><span class="bm-val">30–35%</span></div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">MET003 <span class="dot gap"></span></div>
+      <div class="kv" id="kpi-qual-rate" style="color:var(--red)"></div>
+      <div class="kl">Qualification Rate</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px" id="kpi-qual-sub"></div>
+      <div class="bm"><span class="bm-lbl">B2B MQL-to-opp benchmark</span><span class="bm-val">30–50%</span></div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">MET004 <span class="dot gap"></span></div>
+      <div class="kv" id="kpi-target" style="color:var(--red)"></div>
+      <div class="kl">Target Progress — Q1</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px" id="kpi-target-sub"></div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">MET056 <span class="dot ok"></span></div>
+      <div class="kv" id="kpi-pickup" style="color:var(--teal)"></div>
+      <div class="kl">Pickup Rate</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px" id="kpi-pickup-sub"></div>
+      <div class="bm"><span class="bm-lbl">B2B outbound connect avg</span><span class="bm-val">3–10%</span></div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">MET062 <span class="dot ok"></span></div>
+      <div class="kv" id="kpi-sla" style="color:var(--teal)"></div>
+      <div class="kl">Speed-to-Call SLA</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">All eligible transitions within 24h</div>
+      <div class="bm"><span class="bm-lbl">Ideal speed-to-lead</span><span class="bm-val">&lt;1h (53% CVR)</span></div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">TechTarget / NetLine <span class="dot ok"></span></div>
+      <div class="kv" id="kpi-cs-leads"></div>
+      <div class="kl" id="kpi-cs-label">Campaign Leads</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:3px">98% C-Level · 100% US · All lead score 4</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Weekly Volume Trend — MEL, MQP, PO</span></div>
+      <canvas id="c-trend" width="340" height="100" style="max-width:100%"></canvas>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Pickup Rate % — Weekly (MET056)</span></div>
+      <canvas id="c-pickup" width="340" height="100" style="max-width:100%"></canvas>
+    </div>
+  </div>
+
+  <div class="gcall">
+    <div class="gcall-dot"></div>
+    <div>
+      <div class="gcall-lbl">Open Measurement Gaps</div>
+      <div class="gcall-txt"><span id="open-gaps-text"></span></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ FUNNEL + AGE ═══════════════ -->
+<section id="funnel" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey" id="funnel-hero-ey">Eloqua Pipeline · As of May 26, 2026</div>
+    <div class="shr-t">Funnel Stage Health + Age</div>
+    <div class="shr-s" id="funnel-hero-sub"></div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sl"><span>Lifecycle Stage Flow with Average Age</span></div>
+    <div class="lf-flow">
+      <div class="lf-stage">
+        <div class="lf-box" style="border-top:2px solid #374151;opacity:.4">
+          <div class="lf-code" style="color:#6b7280">Stage 1</div>
+          <div class="lf-name" style="color:#9ca3af">Unknown (Adobe)</div>
+          <div><span class="age-badge" style="background:rgba(107,114,128,.12);color:#6b7280;border:1px solid rgba(107,114,128,.3)">No Data</span></div>
+          <div class="lf-wip" style="color:#6b7280">—</div>
+          <div class="lf-sub">ECID join not yet implemented</div>
+        </div>
+      </div>
+      <div class="lf-arrow">›</div>
+      <div class="lf-stage">
+        <div class="lf-box" style="border-top:2px solid var(--px2)">
+          <div class="lf-code" style="color:var(--px2)">Stage 2</div>
+          <div class="lf-name">Known / Consented</div>
+          <div><span class="age-badge age-warn" id="lf-known-age"></span></div>
+          <div class="lf-wip" style="color:var(--px2)" id="lf-known-wip"></div>
+          <div class="lf-sub" id="lf-known-sub"></div>
+        </div>
+      </div>
+      <div class="lf-arrow">›</div>
+      <div class="lf-stage">
+        <div class="lf-box" style="border-top:2px solid var(--gold)">
+          <div class="lf-code" style="color:var(--gold)">Stage 3</div>
+          <div class="lf-name">Validation (MQP)</div>
+          <div><span class="age-badge age-hot" id="lf-val-age"></span></div>
+          <div class="lf-wip" style="color:var(--gold)" id="lf-val-wip"></div>
+          <div class="lf-sub" id="lf-val-sub"></div>
+        </div>
+      </div>
+      <div class="lf-arrow">›</div>
+      <div class="lf-stage">
+        <div class="lf-box" style="border-top:2px solid var(--px)">
+          <div class="lf-code" style="color:var(--px)">Stage 4</div>
+          <div class="lf-name">MEL Classification</div>
+          <div><span class="age-badge age-ok" id="lf-mel-age"></span></div>
+          <div class="lf-wip" style="color:var(--px)" id="lf-mel-wip"></div>
+          <div class="lf-sub" id="lf-mel-sub"></div>
+        </div>
+      </div>
+      <div class="lf-arrow">›</div>
+      <div class="lf-stage">
+        <div class="lf-box" style="border-top:2px solid var(--red)">
+          <div class="lf-code" style="color:var(--red)">Stage 5</div>
+          <div class="lf-name">Partner Opportunity (PO)</div>
+          <div><span class="age-badge age-hot" id="lf-po-age"></span></div>
+          <div class="lf-wip" style="color:var(--red)" id="lf-po-wip"></div>
+          <div class="lf-sub" id="lf-po-sub"></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:12px">
+      <div style="background:rgba(251,191,36,.06);border:1px solid rgba(251,191,36,.22);border-radius:9px;padding:10px 14px;min-width:110px;text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">Recycled</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)" id="funnel-recycled"></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Returned to nurture</div>
+      </div>
+      <div style="background:rgba(248,113,113,.06);border:1px solid rgba(248,113,113,.22);border-radius:9px;padding:10px 14px;min-width:110px;text-align:center">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">DQ'd</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red)" id="funnel-dq"></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Disqualified</div>
+      </div>
+    </div>
+    <div class="note">Age interpretation: 19.2h dwell at Known and 28.8h at Validation are the primary optimization targets. 28.8h exceeds the 24h SLA ceiling — some contacts are breaching. MEL at 9.6h is fast, indicating NLPearl result processing is working correctly once a call resolves.</div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Average Age by Stage (hours)</span></div>
+      <canvas id="c-age" width="340" height="180" style="max-width:100%"></canvas>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="sl"><span>Stage Attrition — All Time Entries</span></div>
+        <div class="atr-row">
+          <div><div style="font-size:11px;color:var(--text)">Unknown to Known</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)" id="atr-u2k-label"></div></div>
+          <div><div class="atr-pct" style="color:var(--gold)" id="atr-u2k-pct"></div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right">lost</div></div>
+        </div>
+        <div class="atr-row">
+          <div><div style="font-size:11px;color:var(--text)">Known to Validation</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)" id="atr-k2v-label"></div></div>
+          <div><div class="atr-pct" style="color:var(--teal)" id="atr-k2v-pct"></div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right">lost</div></div>
+        </div>
+        <div class="atr-row">
+          <div><div style="font-size:11px;color:var(--text)">Validation to MEL</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)" id="atr-v2m-label"></div></div>
+          <div><div class="atr-pct" style="color:var(--gold)" id="atr-v2m-pct"></div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right">lost</div></div>
+        </div>
+        <div class="atr-row">
+          <div><div style="font-size:11px;color:var(--text)">MEL to Partner Opportunity</div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3)" id="atr-m2p-label"></div></div>
+          <div><div class="atr-pct" style="color:var(--red)" id="atr-m2p-pct"></div><div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);text-align:right" id="atr-m2p-txt">none converted</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:10px">Terminal / Recycled Counts</div>
+        <div style="display:flex;gap:18px">
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold)" id="term-recycled"></div><div style="font-size:10px;color:var(--text3)">Recycled to Nurture</div></div>
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)" id="term-dq"></div><div style="font-size:10px;color:var(--text3)">Disqualified</div></div>
+          <div><div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--text)" id="term-po"></div><div style="font-size:10px;color:var(--text3)">POs to ACE</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g3">
+    <div class="card teal-hi">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--teal);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px">Healthy Age Signal</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--teal)" id="spot-mel-age"></div>
+      <div style="font-size:11px;color:var(--text);margin-top:2px">MEL Classification</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6">Fast post-call classification. NLPearl result processing is working. Once a call resolves, MEL scoring is applied quickly.</div>
+    </div>
+    <div class="card gold-hi">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gold);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px">Watch — Near SLA Ceiling</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--gold)" id="spot-val-age"></div>
+      <div style="font-size:11px;color:var(--text);margin-top:2px">In Validation</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6">SLA is 24h. Avg age exceeding it means some contacts are breaching. 28 WIP here — if pickup rate is low, contacts stall waiting for a connection.</div>
+    </div>
+    <div class="card warn">
+      <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:7px">Primary Bottleneck</div>
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--red)">&#8734;</div>
+      <div style="font-size:11px;color:var(--text);margin-top:2px">PO Gate — 0 Conversions</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:4px;line-height:1.6"><span id="po-bottleneck-note"></span></div>
+    </div>
+  </div>
+
+  <!-- Qualification Gates -->
+  <div class="g2" style="margin-top:0">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="gate" style="border-left-color:var(--red)">
+        <div class="gate-title" style="color:var(--red)">#1 — Disqualification Gate (Runs First)</div>
+        <div class="gate-rule">Domain contains @vmware or @amazon</div>
+        <div class="gate-rule">Invalid email format</div>
+        <div class="gate-rule">Country is not US</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--red);margin-top:6px">Lifecycle Stage = Disqualified · No further processing</div>
+      </div>
+      <div class="gate" style="border-left-color:var(--teal)">
+        <div class="gate-title" style="color:var(--teal)">#2 — ACE / PO Readiness Gate</div>
+        <div class="gate-rule">VMware environment size is 100+ VMs</div>
+        <div class="gate-rule">Migration timeline is less than 18 months</div>
+        <div class="gate-rule">Sales + AI consent = yes</div>
+        <div class="gate-rule">Nexus_Qualification_Method = Direct Qualification</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--teal);margin-top:6px">Lifecycle Stage = PO · Trigger ACE upload workflow</div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div class="gate" style="border-left-color:var(--px)">
+        <div class="gate-title" style="color:var(--px)">#3 — NLPearl Call Readiness (MQP Gate)</div>
+        <div class="gate-rule">VMware environment confirmed (any size except "not a VMware customer")</div>
+        <div class="gate-rule">Sales + AI consent = yes</div>
+        <div class="gate-rule">Phone number not blank</div>
+        <div class="gate-rule">Timezone or State not blank</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px);margin-top:6px">Lifecycle Stage = MQP · Routing Status = NLPearl</div>
+      </div>
+      <div class="gate" style="border-left-color:var(--gold)">
+        <div class="gate-title" style="color:var(--gold)">#4 — Nurture Routing (MEL Gate)</div>
+        <div class="gate-rule">Sales + AI consent = no</div>
+        <div class="gate-rule">Marketing consent = yes</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--gold);margin-top:6px">Lifecycle Stage = MEL · Routing Status = Nurture</div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ AI CALLS ═══════════════ -->
+<section id="ai" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">NLPearl AI Voice Agent · Apr 27 Week Peak</div>
+    <div class="shr-t">AI Outbound Calls — NLPearl Performance</div>
+    <div class="shr-s" id="ai-hero-sub"></div>
+  </div>
+
+  <div class="g4">
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--px)" id="ai-attempts"></div><div style="font-size:11px;color:var(--text)">Calls Attempted</div><div style="font-size:10px;color:var(--text3);margin-top:2px">MET055 — all weeks</div><div class="bm"><span class="bm-lbl">Avg dials to reach DM</span><span class="bm-val">8 attempts</span></div></div>
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--gold)" id="ai-pickup"></div><div style="font-size:11px;color:var(--text)">Pickup Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">MET056 — peak week Apr 27</div><div class="bm"><span class="bm-lbl">B2B outbound avg</span><span class="bm-val">3–10%</span></div></div>
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text2)" id="ai-avg-dur"></div><div style="font-size:11px;color:var(--text)">Avg Call Duration</div><div style="font-size:10px;color:var(--text3);margin-top:2px">MET057 — data pending</div><div class="bm"><span class="bm-lbl">B2B avg productive call</span><span class="bm-val">3–5 min</span></div></div>
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--teal)" id="ai-sla"></div><div style="font-size:11px;color:var(--text)">SLA Compliance</div><div style="font-size:10px;color:var(--text3);margin-top:2px">All calls within 24h SLA</div><div class="bm"><span class="bm-lbl">Ideal speed-to-lead</span><span class="bm-val">&lt;1h (53% CVR)</span></div></div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>MET055 + MET056 — Attempts vs Connected + Rate %</span></div>
+      <canvas id="c-calls" width="340" height="120" style="max-width:100%"></canvas>
+    </div>
+    <div class="card">
+      <div class="sl"><span>MET054 — Call Signal Distribution (Apr 27 Week)</span></div>
+      <div style="margin-top:8px">
+        <div class="sig-row"><div class="sig-dot" style="background:var(--teal);box-shadow:0 0 5px var(--teal)"></div><div class="sig-name">Strong — PO Candidate</div><div class="sig-pts" style="color:var(--teal)" id="sig-strong"></div><div class="sig-tr"><div class="sig-fi" id="sig-strong-bar" style="background:var(--teal);opacity:.8"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></div><div class="sig-name">Weak — Monitor</div><div class="sig-pts" style="color:var(--gold)" id="sig-weak"></div><div class="sig-tr"><div class="sig-fi" id="sig-weak-bar" style="background:var(--gold);opacity:.8"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div><div class="sig-name">Negative — Recycle</div><div class="sig-pts" style="color:var(--red)" id="sig-neg"></div><div class="sig-tr"><div class="sig-fi" id="sig-neg-bar" style="background:var(--red);opacity:.8"></div></div></div>
+        <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3);box-shadow:0 0 5px var(--text3)"></div><div class="sig-name">No Connect</div><div class="sig-pts" style="color:var(--text3)" id="sig-nc"></div><div class="sig-tr"><div class="sig-fi" id="sig-nc-bar" style="background:var(--text3);opacity:.8"></div></div></div>
+        <div class="note">17 Strong signals, 0 POs. First ACE upload is being prepared this week by Connor, Ian, and Paulo. Per the ACE Readiness gate (#2), a Strong signal requires 100+ VMs, migration timeline under 18mo, and sales + AI consent. Executing the first upload will confirm whether NLPearl structured data is flowing correctly to the ACE submission format.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Benchmarks -->
+  <div class="card">
+    <div class="sl"><span>AI Outbound Call Benchmarks — B2B 2025 (Nexus vs Industry)</span></div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:14px;line-height:1.6">Sources: SalesHive B2B Cold Calling Benchmarks 2025, Martal Group Cold Call Statistics 2025, Optifai Pipeline Study 2026. NLPearl is an AI agent, not a human SDR — treat connect rate benchmarks as floor guidance.</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px">
+      <div class="bmt" style="border-color:rgba(0,229,192,.3)"><div class="bmt-lbl">Nexus best week</div><div class="bmt-val" style="color:var(--teal)" id="bmt-best-pct"></div><div class="bmt-sub" id="bmt-best-sub">Pickup rate — Apr 27 week. 44 of 183 calls connected.</div></div>
+      <div class="bmt"><div class="bmt-lbl">B2B connect rate (avg)</div><div class="bmt-val">3–10%</div><div class="bmt-sub">US B2B outbound. Enterprise / C-suite skews lower end.</div></div>
+      <div class="bmt" style="border-color:rgba(251,191,36,.3)"><div class="bmt-lbl">Top performer target</div><div class="bmt-val" style="color:var(--gold)">15–20%</div><div class="bmt-sub">AI-powered dialing with verified direct dials + targeted ICP.</div></div>
+      <div class="bmt"><div class="bmt-lbl">Dial-to-meeting avg</div><div class="bmt-val">2.5%</div><div class="bmt-sub">~1 qualified meeting per 40 dials. Top performers reach 5–8%.</div></div>
+    </div>
+    <div class="g2" style="margin-bottom:0">
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">How Nexus compares</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.9">
+          <div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--teal);flex-shrink:0">+</span>24% pickup rate substantially exceeds the 3–10% B2B average and approaches top-performer territory. Pre-qualified, consent-confirmed lists are driving the outperformance.</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--teal);flex-shrink:0">+</span>24h SLA compliance at 100% is strong. Research shows leads contacted within 1 hour convert at 53% vs 17% at 24h — tightening SLA is the next leverage point.</div>
+          <div style="padding:5px 0;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--red);flex-shrink:0">!</span>17 Strong signals from connected calls, 0 converted to PO. The bottleneck is the post-call ACE workflow, not the calling performance.</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family:'DM Mono',monospace;font-size:8.5px;color:var(--text3);text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px">Timing and quality notes</div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.9">
+          <div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--text2);flex-shrink:0">+</span>Best B2B windows: Tuesday through Thursday, 10–11am and 4–5pm in the prospect's local timezone. Midweek afternoons show up to 71% better results than Monday/Friday.</div>
+          <div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start"><span style="color:var(--text2);flex-shrink:0">+</span>Research shows 8 attempts on average to reach a decision-maker. Most of the Apr 27 volume (183 attempts) is consistent with a multi-touch cadence.</div>
+          <div style="padding:5px 0;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--text2);flex-shrink:0">+</span>57% of C-suite buyers prefer phone contact. Given the 98% C-Level NetLine batch, NLPearl is well-positioned — verify scripts are tuned for financial/ROI framing, not technical depth.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g3" style="margin-top:14px">
+    <div class="card"><div class="kpi-meta">MET058 — Opt-Outs <span class="dot warn"></span></div><div class="kv" id="ai-opt-outs" style="color:var(--text2)">—</div><div class="kl" style="color:var(--text2)">AI Call Opt-Outs</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Count of opt-out events from NLPearl calls. Data pending confirmation.</div></div>
+    <div class="card"><div class="kpi-meta">MET059 — Sentiment <span class="dot warn"></span></div><div class="kv" id="ai-sentiment" style="color:var(--text2)">—</div><div class="kl" style="color:var(--text2)">Avg Sentiment Score</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Avg or distribution of sentiment per connected call. Model inference pending.</div></div>
+    <div class="card"><div class="kpi-meta">MET060 — Credits <span class="dot warn"></span></div><div class="kv" id="ai-credits" style="color:var(--text2)">—</div><div class="kl" style="color:var(--text2)">NLPearl Credits Used</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Sum of credits consumed by call, minute, or action. Reconciliation may lag 24–48h.</div></div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ CAMPAIGN REPORTING ═══════════════ -->
+<section id="cs" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">NetLine Content Syndication · May 7–26, 2026 · Report Date: May 26, 2026</div>
+    <div class="shr-t">Campaign Reporting — Audience Intelligence</div>
+    <div class="shr-s" id="cs-hero-sub"></div>
+  </div>
+
+  <div class="g4">
+    <div class="card warn"><div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Q1 Program Target</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--red)" id="cs-q1-po-tile"></div><div style="font-size:11px;color:var(--text)">POs Delivered — Q1</div><div style="font-size:10px;color:var(--text3);margin-top:2px" id="cs-q1-sub-tile"></div><div class="bm"><span class="bm-lbl">Contractual handoff target</span><span class="bm-val">Behind</span></div></div>
+    <div class="card"><div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px">Full Program Target</div><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--px)" id="cs-total-po-tile"></div><div style="font-size:11px;color:var(--text)">Total POs — Program</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Q1–Q4 · Apr 2026 – Feb 2027</div><div class="bm"><span class="bm-lbl">Program commitment</span><span class="bm-val">900 POs total</span></div></div>
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--gold)" id="cs-clevel-tile"></div><div style="font-size:11px;color:var(--text)">C-Level Contacts</div><div style="font-size:10px;color:var(--text3);margin-top:2px">623 C-Level · 191 Director · 70 VP</div><div class="bm"><span class="bm-lbl">C-suite prefers phone contact</span><span class="bm-val">57% of buyers</span></div></div>
+    <div class="card"><div style="font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--px)">100%</div><div style="font-size:11px;color:var(--text)">US-Only · AI Consent</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Q5 + Q6 — both consent fields TRUE · n=940</div><div class="bm"><span class="bm-lbl">Dual consent required for routing</span><span class="bm-val">Program standard</span></div></div>
+  </div>
+
+  <!-- Content Performance -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Content Assets — 2 Offers</span></div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="background:rgba(99,102,241,.12);border:1px solid rgba(99,102,241,.3);border-radius:8px;padding:8px 12px;flex-shrink:0;text-align:center;min-width:68px">
+            <div style="font-family:'DM Mono',monospace;font-size:7px;color:var(--px2);letter-spacing:.1em;text-transform:uppercase">Offer</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--px)">w_awsi224</div>
+            <div style="font-size:9px;color:var(--text3)">Guide</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">VMware to AWS: Four Solutions That Build the Business Case</div>
+            <div style="font-size:10px;color:var(--text2);line-height:1.6">590 leads (63%) · 173,790 impressions · 294.6 imps/lead</div>
+            <div style="margin-top:6px;height:5px;background:var(--bg3);border-radius:3px"><div style="width:63%;height:100%;background:var(--px);border-radius:3px;opacity:.85"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="background:rgba(0,229,192,.08);border:1px solid rgba(0,229,192,.25);border-radius:8px;padding:8px 12px;flex-shrink:0;text-align:center;min-width:68px">
+            <div style="font-family:'DM Mono',monospace;font-size:7px;color:var(--teal);letter-spacing:.1em;text-transform:uppercase">Offer</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:var(--teal)">w_awsi225</div>
+            <div style="font-size:9px;color:var(--text3)">Solution Brief</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:11px;color:var(--text);font-weight:600;margin-bottom:3px">Low-Risk VMware Migration: Your Path and Timeline to AWS</div>
+            <div style="font-size:10px;color:var(--text2);line-height:1.6">350 leads (37%) · 46,497 impressions · 132.8 imps/lead</div>
+            <div style="margin-top:6px;height:5px;background:var(--bg3);border-radius:3px"><div style="width:37%;height:100%;background:var(--teal);border-radius:3px;opacity:.85"></div></div>
+          </div>
+        </div>
+      </div>
+      <div class="note" style="margin-top:12px">w_awsi224 (Guide) is the stronger performer at 63% of leads with a lower impression-to-lead ratio, indicating higher resonance. w_awsi225 (Solution Brief) captures the 37% less CFO-centric audience with heavier IT Infrastructure and DevOps job functions.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Consent Coverage — Q5 + Q6 (n=940)</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;margin-top:8px">
+        <div style="background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--teal)">940/940</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Q5 Marketing Consent</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Receive marketing comms from Accenture in collab with AWS</div>
+        </div>
+        <div style="background:rgba(0,229,192,.06);border:1px solid rgba(0,229,192,.2);border-radius:8px;padding:12px;text-align:center">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--teal)">940/940</div>
+          <div style="font-size:10px;color:var(--text3);margin-top:2px">Q6 Joint Contact Consent</div>
+          <div style="font-size:9px;color:var(--text3);margin-top:3px;line-height:1.5">Accenture and AWS may contact and share data between parties</div>
+        </div>
+      </div>
+      <div class="note">Full dual-consent coverage across all 940 leads. All are eligible for both Accenture and AWS outreach including NLPearl AI calls. No consent gaps to resolve before routing.</div>
+    </div>
+  </div>
+
+  <!-- Job Function + Revenue -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Job Function Breakdown (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px);box-shadow:0 0 5px var(--px)"></div><div class="sig-name">CFO / Chief Financial Officer</div><div class="sig-pts" style="color:var(--px)">342 (36%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2);box-shadow:0 0 5px var(--px2)"></div><div class="sig-name">CIO / Chief Information Officer</div><div class="sig-pts" style="color:var(--px2)">200 (21%)</div><div class="sig-tr"><div class="sig-fi" style="width:58%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal);box-shadow:0 0 5px var(--teal)"></div><div class="sig-name">IT / Cyber Security &amp; Info Security</div><div class="sig-pts" style="color:var(--teal)">111 (12%)</div><div class="sig-tr"><div class="sig-fi" style="width:32%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">CTO / Chief Technology Officer</div><div class="sig-pts" style="color:var(--gold)">83 (9%)</div><div class="sig-tr"><div class="sig-fi" style="width:24%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--red)"></div><div class="sig-name">IT / IT Infrastructure</div><div class="sig-pts" style="color:var(--red)">69 (7%)</div><div class="sig-tr"><div class="sig-fi" style="width:20%;background:var(--red);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">Fin:Controller + IT:DevOps + Other</div><div class="sig-pts" style="color:var(--text3)">135 (14%)</div><div class="sig-tr"><div class="sig-fi" style="width:40%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">CFO still leads at 36%, but CIO (21%) and Cyber Security (12%) roles are more prominent than in the early batch — reflecting the addition of w_awsi225 which skews toward IT/Infrastructure. For NLPearl: CFOs get cost/ROI framing; CIOs and CTOs get architectural risk and migration path framing.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Revenue Size (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px);box-shadow:0 0 5px var(--px)"></div><div class="sig-name">$100 – 499.9 Million</div><div class="sig-pts" style="color:var(--px)">335 (36%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2);box-shadow:0 0 5px var(--px2)"></div><div class="sig-name">$500 – 999.9 Million</div><div class="sig-pts" style="color:var(--px2)">256 (27%)</div><div class="sig-tr"><div class="sig-fi" style="width:76%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal);box-shadow:0 0 5px var(--teal)"></div><div class="sig-name">$1 – 4.99 Billion</div><div class="sig-pts" style="color:var(--teal)">240 (26%)</div><div class="sig-tr"><div class="sig-fi" style="width:72%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">$50 – 99.99 Million</div><div class="sig-pts" style="color:var(--gold)">43 (5%)</div><div class="sig-tr"><div class="sig-fi" style="width:13%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">More than $5B + remaining</div><div class="sig-pts" style="color:var(--text3)">66 (7%)</div><div class="sig-tr"><div class="sig-fi" style="width:20%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">63% in the $100M–$999.9M band — strong mid-market concentration. The $1B+ cohort (240 leads, 26%) is notably larger than the early batch, indicating upmarket reach from the second offer.</div>
+    </div>
+  </div>
+
+  <!-- Employee Size + Industries -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Employee Size (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">1,000 – 2,499 employees</div><div class="sig-pts" style="color:var(--px)">385 (41%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">2,500 – 4,999 employees</div><div class="sig-pts" style="color:var(--px2)">284 (30%)</div><div class="sig-tr"><div class="sig-fi" style="width:74%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">500 – 999 employees</div><div class="sig-pts" style="color:var(--teal)">153 (16%)</div><div class="sig-tr"><div class="sig-fi" style="width:40%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">5,000 – 9,999 employees</div><div class="sig-pts" style="color:var(--gold)">67 (7%)</div><div class="sig-tr"><div class="sig-fi" style="width:17%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">250 – 499 + 10k–19k + Other</div><div class="sig-pts" style="color:var(--text3)">51 (5%)</div><div class="sig-tr"><div class="sig-fi" style="width:13%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">71% in the 1,000–4,999 employee band — strong alignment with the Sub-Large Enterprise ICP. The 1,000–2,499 cohort (41%) remains the dominant segment and the best fit for the fewer-than-2k VM program criteria.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Top Industries (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">Computers and Technology</div><div class="sig-pts" style="color:var(--px)">186 (20%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">Finance</div><div class="sig-pts" style="color:var(--px2)">115 (12%)</div><div class="sig-tr"><div class="sig-fi" style="width:62%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">Healthcare / Medical</div><div class="sig-pts" style="color:var(--teal)">73 (8%)</div><div class="sig-tr"><div class="sig-fi" style="width:39%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">Education</div><div class="sig-pts" style="color:var(--gold)">71 (8%)</div><div class="sig-tr"><div class="sig-fi" style="width:38%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--red)"></div><div class="sig-name">Insurance</div><div class="sig-pts" style="color:var(--red)">62 (7%)</div><div class="sig-tr"><div class="sig-fi" style="width:33%;background:var(--red);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">Manufacturing + Government + Other</div><div class="sig-pts" style="color:var(--text3)">433 (46%)</div><div class="sig-tr"><div class="sig-fi" style="width:46%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">Tech and Finance lead — consistent with the VMware migration buyer profile. Education (71) and Insurance (62) are significant new segments from the expanded campaign, both likely driven by regulatory and cost-driven migration intent.</div>
+    </div>
+  </div>
+
+  <!-- Q1–Q3 custom questions -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Q1 — VMware Environment Size (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">500–999 VMs</div><div class="sig-pts" style="color:var(--px)">291 (31%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">100–249 VMs</div><div class="sig-pts" style="color:var(--px2)">243 (26%)</div><div class="sig-tr"><div class="sig-fi" style="width:83%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">1,000–1,999 VMs</div><div class="sig-pts" style="color:var(--teal)">170 (18%)</div><div class="sig-tr"><div class="sig-fi" style="width:58%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">250–499 VMs</div><div class="sig-pts" style="color:var(--gold)">164 (17%)</div><div class="sig-tr"><div class="sig-fi" style="width:56%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">2,000+ VMs</div><div class="sig-pts" style="color:var(--text3)">72 (8%)</div><div class="sig-tr"><div class="sig-fi" style="width:25%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">92% report environments under 2,000 VMs — all within the program criteria. The 500–999 VM cohort (31%) is the new plurality, a shift from the early batch which skewed 100–249. All five bands are in-scope; the 2,000+ cohort (72 leads) may need upmarket routing.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Q2 — Migration Timeline (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">12–18 months</div><div class="sig-pts" style="color:var(--px)">536 (57%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">6–12 months</div><div class="sig-pts" style="color:var(--teal)">305 (32%)</div><div class="sig-tr"><div class="sig-fi" style="width:57%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">0–6 months</div><div class="sig-pts" style="color:var(--gold)">99 (11%)</div><div class="sig-tr"><div class="sig-fi" style="width:18%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="note">99 leads targeting migration within 0–6 months are the highest-urgency group for NLPearl prioritization. The 6–12 month cohort (305 leads, 32%) is the active procurement window. Prioritize these two groups — 404 leads total — for first-wave outreach sequencing.</div>
+    </div>
+  </div>
+
+  <!-- Q3 + Job Area -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Q3 — Migration Drivers (n=940, multi-select)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">Data center exit / consolidation</div><div class="sig-pts" style="color:var(--px)">160 (17%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">Infrastructure modernization</div><div class="sig-pts" style="color:var(--px2)">158 (17%)</div><div class="sig-tr"><div class="sig-fi" style="width:99%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">Licensing / vendor changes</div><div class="sig-pts" style="color:var(--teal)">156 (17%)</div><div class="sig-tr"><div class="sig-fi" style="width:98%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">Cost optimization</div><div class="sig-pts" style="color:var(--gold)">154 (16%)</div><div class="sig-tr"><div class="sig-fi" style="width:96%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--red)"></div><div class="sig-name">Performance / scalability needs</div><div class="sig-pts" style="color:var(--red)">116 (12%)</div><div class="sig-tr"><div class="sig-fi" style="width:73%;background:var(--red);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">Risk / compliance + Exploring options</div><div class="sig-pts" style="color:var(--text3)">196 (21%)</div><div class="sig-tr"><div class="sig-fi" style="width:46%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">Drivers are highly distributed — no single dominant signal at scale. Licensing/vendor changes (17%) is a strong active VMware exit intent indicator. Lead NLPearl scripts with a multi-angle opener that addresses cost, vendor risk, and infrastructure modernization simultaneously.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Q4 — Role in Decision (n=940)</span></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px)"></div><div class="sig-name">Final decision maker</div><div class="sig-pts" style="color:var(--px)">519 (55%)</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--px);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">Part of decision-making team</div><div class="sig-pts" style="color:var(--px2)">160 (17%)</div><div class="sig-tr"><div class="sig-fi" style="width:31%;background:var(--px2);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--teal)"></div><div class="sig-name">Influencer</div><div class="sig-pts" style="color:var(--teal)">136 (14%)</div><div class="sig-tr"><div class="sig-fi" style="width:26%;background:var(--teal);opacity:.8"></div></div></div>
+      <div class="sig-row"><div class="sig-dot" style="background:var(--gold)"></div><div class="sig-name">Technical evaluator</div><div class="sig-pts" style="color:var(--gold)">75 (8%)</div><div class="sig-tr"><div class="sig-fi" style="width:14%;background:var(--gold);opacity:.8"></div></div></div>
+      <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--text3)"></div><div class="sig-name">Researching / gathering information</div><div class="sig-pts" style="color:var(--text3)">50 (5%)</div><div class="sig-tr"><div class="sig-fi" style="width:10%;background:var(--text3);opacity:.7"></div></div></div>
+      <div class="note">55% are final decision makers — strong buying authority concentration. Combined with decision-team members (17%), 72% of contacts hold direct purchase influence. NLPearl should validate role on call for influencer and evaluator contacts before investing outreach depth.</div>
+    </div>
+  </div>
+
+  <!-- Leads by Date + Top States -->
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Leads Delivered by Date — Both Offers</span></div>
+      <div style="margin-top:10px">
+        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:4px 12px;font-size:10px;color:var(--text3);font-family:'DM Mono',monospace;margin-bottom:6px;padding-bottom:5px;border-bottom:1px solid var(--bg3)">
+          <span>Date Range</span><span style="text-align:right">w_awsi224</span><span style="text-align:right">w_awsi225</span><span style="text-align:right;color:var(--px2)">Total</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr auto auto auto;gap:3px 12px;font-size:10px;color:var(--text2);font-family:'DM Mono',monospace">
+          <span>05/07–05/08</span><span style="text-align:right">20</span><span style="text-align:right">0</span><span style="text-align:right;color:var(--text)">20</span>
+          <span>05/09–05/10</span><span style="text-align:right">42</span><span style="text-align:right">0</span><span style="text-align:right;color:var(--text)">42</span>
+          <span>05/11–05/12</span><span style="text-align:right">44</span><span style="text-align:right">18</span><span style="text-align:right;color:var(--text)">62</span>
+          <span>05/13–05/14</span><span style="text-align:right">76</span><span style="text-align:right">35</span><span style="text-align:right;color:var(--text)">111</span>
+          <span>05/15–05/16</span><span style="text-align:right">31</span><span style="text-align:right">0</span><span style="text-align:right;color:var(--text)">31</span>
+          <span>05/17–05/18</span><span style="text-align:right">40</span><span style="text-align:right">36</span><span style="text-align:right;color:var(--text)">76</span>
+          <span>05/19–05/20</span><span style="text-align:right">99</span><span style="text-align:right">72</span><span style="text-align:right;color:var(--text)">171</span>
+          <span>05/21–05/22</span><span style="text-align:right">163</span><span style="text-align:right">85</span><span style="text-align:right;color:var(--text)">248</span>
+          <span>05/23–05/24</span><span style="text-align:right">24</span><span style="text-align:right">45</span><span style="text-align:right;color:var(--text)">69</span>
+          <span>05/25–05/26</span><span style="text-align:right">51</span><span style="text-align:right">59</span><span style="text-align:right;color:var(--text)">110</span>
+          <span style="color:var(--px2);font-weight:700">Total</span><span style="text-align:right;color:var(--px2);font-weight:700">590</span><span style="text-align:right;color:var(--teal);font-weight:700">350</span><span style="text-align:right;color:var(--text);font-weight:700">940</span>
+        </div>
+      </div>
+      <div class="note" style="margin-top:10px">Volume peaked May 21–22 (248 leads in 2 days). w_awsi225 surpassed w_awsi224 in the final period (May 23–26), indicating growing resonance for the migration timeline/path framing as the campaign matured.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Geographic Distribution — Top States (n=940, USA only)</span></div>
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:4px 16px;font-size:11px">
+        <div style="color:var(--text3);font-size:9px;font-family:'DM Mono',monospace;padding-bottom:4px;border-bottom:1px solid var(--bg3)">State</div><div style="color:var(--text3);font-size:9px;font-family:'DM Mono',monospace;text-align:right;padding-bottom:4px;border-bottom:1px solid var(--bg3)">Leads</div>
+        <div class="sig-name" style="font-size:10px">California</div><div style="text-align:right;color:var(--px);font-weight:600;font-size:10px">115</div>
+        <div class="sig-name" style="font-size:10px">New York</div><div style="text-align:right;color:var(--px2);font-weight:600;font-size:10px">99</div>
+        <div class="sig-name" style="font-size:10px">Texas</div><div style="text-align:right;color:var(--teal);font-weight:600;font-size:10px">86</div>
+        <div class="sig-name" style="font-size:10px">Virginia</div><div style="text-align:right;color:var(--gold);font-weight:600;font-size:10px">55</div>
+        <div class="sig-name" style="font-size:10px">Florida</div><div style="text-align:right;font-weight:600;font-size:10px">50</div>
+        <div class="sig-name" style="font-size:10px">Illinois</div><div style="text-align:right;font-weight:600;font-size:10px">49</div>
+        <div class="sig-name" style="font-size:10px">Massachusetts</div><div style="text-align:right;font-weight:600;font-size:10px">45</div>
+        <div class="sig-name" style="font-size:10px">Georgia</div><div style="text-align:right;font-weight:600;font-size:10px">33</div>
+        <div class="sig-name" style="font-size:10px">Minnesota</div><div style="text-align:right;font-weight:600;font-size:10px">32</div>
+        <div class="sig-name" style="font-size:10px">Pennsylvania</div><div style="text-align:right;font-weight:600;font-size:10px">28</div>
+        <div class="sig-name" style="font-size:10px;color:var(--text3)">Remaining states</div><div style="text-align:right;font-size:10px;color:var(--text3)">348</div>
+      </div>
+      <div class="note" style="margin-top:10px">CA (115), NY (99), and TX (86) form the top tier. VA (55) — heavy federal contractor presence — is strong for the AWS GovCloud angle. All 940 leads are US-only; no geographic consent issues.</div>
+    </div>
+  </div>
+
+  <!-- Campaign pacing summary -->
+  <div class="card">
+    <div class="sl"><span>NetLine Campaign Pacing — AWS-73639 · Lead Sourcing Only</span></div>
+    <div class="al wa" style="margin-bottom:14px">
+      <span class="al-i">&#9432;</span>
+      <div class="al-t"><strong>This table reflects NetLine campaign-level lead sourcing pacing, not the contractual program handoff targets.</strong> Program PO delivery targets (Q1: 160, Q2: 225, Q3: 255, Q4: 260) are tracked separately under Targets &amp; Pace. These are leads entering the top of funnel, not qualified POs submitted to ACE.</div>
+    </div>
+    <div class="tw">
+      <table class="tbl">
+        <thead><tr><th>Metric</th><th>Value</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Start Date</td><td>05/06/2026</td><td>Campaign active since early May</td></tr>
+          <tr><td>End Date</td><td>09/30/2026</td><td>~18 weeks remaining</td></tr>
+          <tr><td>Cost Per Lead</td><td>$85</td><td>Fixed CPL model</td></tr>
+          <tr><td>Campaign Budget</td><td id="camp-budget-total">$99,960</td><td>Total approved spend</td></tr>
+          <tr><td>Spend to Date</td><td id="camp-spend">$79,900</td><td id="camp-spend-note">940 leads x $85</td></tr>
+          <tr><td>Budget Remaining</td><td id="camp-budget-rem">$20,060</td><td id="camp-budget-rem-note">Covers 236 additional leads</td></tr>
+          <tr><td style="color:var(--px2);font-weight:700">Q1 PO Target</td><td style="color:var(--red)">0 / 160</td><td style="color:var(--red)">Due Jun 12, 2026 — Behind · 40 POs/week required</td></tr>
+          <tr><td style="color:var(--text3)">Q2 PO Target</td><td>225</td><td style="color:var(--text3)">Due Sep 11, 2026 — Upcoming</td></tr>
+          <tr><td style="color:var(--text3)">Q3 PO Target</td><td>255</td><td style="color:var(--text3)">Due Dec 11, 2026 — Upcoming</td></tr>
+          <tr><td style="color:var(--text3)">Q4 PO Target</td><td>260</td><td style="color:var(--text3)">Due Feb 20, 2027 — Upcoming</td></tr>
+          <tr style="background:rgba(99,102,241,.04)"><td style="color:var(--px2);font-weight:700">Total PO Commitment</td><td style="color:var(--text);font-weight:700">900</td><td>Apr 2026 – Feb 2027 · Contractual program handoff targets</td></tr>
+          <tr><td>Leads Rejected</td><td>267</td><td>Did not meet filter criteria</td></tr>
+          <tr><td style="color:var(--gold);font-weight:700">Campaign Status</td><td style="color:var(--gold);font-weight:700">Suspended / Cap</td><td>Monthly cap reached — pending resume or adjustment</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ TARGETS ═══════════════ -->
+<section id="targets" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Q1 Critical · Mar 16 – Jun 12, 2026</div>
+    <div class="shr-t">Program Targets — Quarterly PO Pace</div>
+    <div class="shr-s" id="targets-hero-sub"></div>
+  </div>
+
+  <div class="g4" style="margin-bottom:14px">
+    <div class="qc cur">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div class="ql">Q1</div><span class="q-badge active">In Progress</span></div>
+      <div><span class="qd" id="q1-delivered">0</span><span style="font-size:14px;color:var(--text2)"> / <span id="q1-target-disp">160</span></span></div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;margin:8px 0"><div id="q1-bar" style="height:100%;border-radius:2px;background:var(--px);width:0%"></div></div>
+      <div class="qmeta">Due <span id="q1-due-disp">Jun 12, 2026</span></div>
+      <div class="qpace" id="q1-pace"></div>
+    </div>
+    <div class="qc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div class="ql" style="color:var(--text2)">Q2</div><span class="q-badge upcoming">Upcoming</span></div>
+      <div><span class="qd" id="q2-delivered" style="color:var(--text2)">0</span><span style="font-size:14px;color:var(--text3)"> / <span id="q2-target-disp">225</span></span></div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;margin:8px 0"><div id="q2-bar" style="height:100%;border-radius:2px;background:var(--px);width:0%"></div></div>
+      <div class="qmeta">Due <span id="q2-due-disp">Sep 11, 2026</span></div>
+      <div class="qpace" id="q2-pace">17 POs / week · 13 wks</div>
+    </div>
+    <div class="qc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div class="ql" style="color:var(--text2)">Q3</div><span class="q-badge upcoming">Upcoming</span></div>
+      <div><span class="qd" id="q3-delivered" style="color:var(--text2)">0</span><span style="font-size:14px;color:var(--text3)"> / <span id="q3-target-disp">255</span></span></div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;margin:8px 0"><div id="q3-bar" style="height:100%;border-radius:2px;background:var(--px);width:0%"></div></div>
+      <div class="qmeta">Due <span id="q3-due-disp">Dec 11, 2026</span></div>
+      <div class="qpace" id="q3-pace">20 POs / week · 13 wks</div>
+    </div>
+    <div class="qc">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px"><div class="ql" style="color:var(--text2)">Q4</div><span class="q-badge upcoming">Upcoming</span></div>
+      <div><span class="qd" id="q4-delivered" style="color:var(--text2)">0</span><span style="font-size:14px;color:var(--text3)"> / <span id="q4-target-disp">260</span></span></div>
+      <div style="height:4px;background:var(--bg3);border-radius:2px;margin:8px 0"><div id="q4-bar" style="height:100%;border-radius:2px;background:var(--px);width:0%"></div></div>
+      <div class="qmeta">Due <span id="q4-due-disp">Feb 20, 2027</span></div>
+      <div class="qpace" id="q4-pace">26 POs / week · 10 wks</div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sl"><span>Q1 Pipeline Feed — Top-of-Funnel Input vs PO Target</span></div>
+
+    <!-- Funnel flow strip -->
+    <div style="display:flex;align-items:center;gap:0;overflow-x:auto;padding-bottom:4px;margin-bottom:16px">
+
+      <!-- Stage: NetLine Leads -->
+      <div style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 12px;margin-right:4px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px">Campaign Leads</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--px)">940</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:500;margin-bottom:3px">NetLine Leads Received</div>
+        <div style="font-size:9px;color:var(--text3)">May 7–26 · Dual consent · 100% US</div>
+      </div>
+
+      <div style="color:var(--text3);font-size:16px;flex-shrink:0;padding:0 4px;margin-top:-10px">›</div>
+
+      <!-- Stage: Eloqua Pipeline -->
+      <div style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 12px;margin-right:4px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px">Eloqua Pipeline</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--px2)">169</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:500;margin-bottom:3px">Contacts In-Flight</div>
+        <div style="font-size:9px;color:var(--text3)">Known → Validation → MEL stages</div>
+      </div>
+
+      <div style="color:var(--text3);font-size:16px;flex-shrink:0;padding:0 4px;margin-top:-10px">›</div>
+
+      <!-- Stage: MEL -->
+      <div style="flex:1;min-width:120px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:13px 12px;margin-right:4px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px">MEL Classification</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--gold)">41</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:500;margin-bottom:3px">MEL Entries — All Time</div>
+        <div style="font-size:9px;color:var(--text3)">17 Strong signal · Awaiting ACE upload</div>
+      </div>
+
+      <div style="color:var(--text3);font-size:16px;flex-shrink:0;padding:0 4px;margin-top:-10px">›</div>
+
+      <!-- Stage: PO Target -->
+      <div style="flex:1;min-width:120px;background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:13px 12px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px">Q1 PO Target</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--red)">0 / 160</div>
+        <div style="font-size:10px;color:var(--text2);font-weight:500;margin-bottom:3px">POs Delivered to ACE</div>
+        <div style="font-size:9px;color:var(--text3)">Due Jun 12, 2026 · 2 weeks remain</div>
+      </div>
+
+    </div>
+
+    <!-- Conversion math row -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px 13px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">Required Conversion Rate</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">17%</div>
+        <div style="font-size:10px;color:var(--text2)">160 POs from 940 leads</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Funnel-to-PO rate needed end-to-end</div>
+      </div>
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px 13px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">MEL-to-PO Conversion Needed</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--gold)">390%</div>
+        <div style="font-size:10px;color:var(--text2)">160 POs from 41 MEL entries</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">Gap requires accelerating new MEL volume</div>
+      </div>
+      <div style="background:rgba(248,113,113,.05);border:1px solid rgba(248,113,113,.2);border-radius:9px;padding:11px 13px">
+        <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px">POs Still Required</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--red)">160</div>
+        <div style="font-size:10px;color:var(--text2)">0 delivered · 2 weeks remain</div>
+        <div style="font-size:9px;color:var(--text3);margin-top:2px">80 POs/week to close Q1 gap</div>
+      </div>
+    </div>
+
+    <div class="note">940 NetLine leads represent top-of-funnel sourcing volume. Of these, 169 are actively in the Eloqua pipeline and 41 have reached MEL classification, with 17 carrying Strong NLPearl signals ready for ACE submission. Closing the Q1 gap requires converting the existing MEL volume into POs and accelerating new contacts through qualification within the 2 remaining weeks. The 17% end-to-end conversion rate required (940 leads to 160 POs) is achievable but depends on completing the first ACE upload and clearing the MEL-to-PO handoff bottleneck.</div>
+  </div>
+
+  <div class="card" style="margin-bottom:14px">
+    <div class="sl"><span>Q1 Burndown — Remaining POs Required vs Ideal Pace (Target: 160 by Jun 12)</span></div>
+    <canvas id="c-burndown" width="700" height="110" style="max-width:100%"></canvas>
+    <div class="note">Ideal pace line assumes 40 POs per week across 2 remaining weeks. Actual line starts at 160 remaining as of May 26. A widening gap between the two lines is the primary escalation signal for the program.</div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Weekly Velocity — POs Delivered per Week (Q1)</span></div>
+      <canvas id="c-velocity" width="340" height="100" style="max-width:100%"></canvas>
+      <div class="note">Required velocity is 40 POs per week across 2 remaining weeks. Current delivered: 0. First ACE upload is being prepared this week — execution is the immediate priority. A single strong week of 40–50 POs meets the pace target.</div>
+    </div>
+    <div class="card">
+      <div class="sl"><span>Cumulative PO Target — Full Program (900 Total)</span></div>
+      <canvas id="c-targets-chart" width="340" height="100" style="max-width:100%"></canvas>
+      <div class="note">Total program commitment: 900 POs across 4 quarters through Feb 2027. Q1 at 160 POs requires 40/week across 2 remaining weeks. 0 delivered as of May 26. First ACE upload prep is active — the pipeline has 169 contacts in-flight and 17 Strong call signals ready for submission.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sl"><span>Quarterly Pace Reference</span></div>
+    <div class="tw">
+      <table class="tbl">
+        <thead><tr><th>Quarter</th><th>Period</th><th>Target POs</th><th>Weeks</th><th>Required / Week</th><th>Delivered</th><th>Remaining</th><th>Status</th></tr></thead>
+        <tbody>
+          <tr><td>Q1</td><td>Mar 16 – Jun 12, 2026</td><td>160</td><td>2 remaining</td><td style="color:var(--red)">40 / wk</td><td style="color:var(--red)">0</td><td style="color:var(--red)">160</td><td><span class="pill p-gap">Behind</span></td></tr>
+          <tr><td>Q2</td><td>Jun 13 – Sep 11, 2026</td><td>225</td><td>13 weeks</td><td>17 / wk</td><td style="color:var(--text3)">0</td><td style="color:var(--text3)">225</td><td><span class="pill p-muted">Upcoming</span></td></tr>
+          <tr><td>Q3</td><td>Sep 12 – Dec 11, 2026</td><td>255</td><td>13 weeks</td><td>20 / wk</td><td style="color:var(--text3)">0</td><td style="color:var(--text3)">255</td><td><span class="pill p-muted">Upcoming</span></td></tr>
+          <tr><td>Q4</td><td>Dec 12, 2026 – Feb 20, 2027</td><td>260</td><td>10 weeks</td><td>26 / wk</td><td style="color:var(--text3)">0</td><td style="color:var(--text3)">260</td><td><span class="pill p-muted">Upcoming</span></td></tr>
+          <tr style="background:rgba(99,102,241,.04)"><td style="color:var(--px2);font-weight:700">Total</td><td>Mar 16, 2026 – Feb 20, 2027</td><td style="color:var(--text);font-weight:700">900</td><td>52 weeks</td><td style="color:var(--px2)">22 / wk avg</td><td style="color:var(--red)">0</td><td style="color:var(--red)">900</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card gold-hi" style="margin-top:14px">
+    <div class="sl"><span>Estimated Pipeline Value — Revenue Model</span></div>
+    <div style="display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="flex-shrink:0">
+        <div style="font-family:'DM Mono',monospace;font-size:8px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px">Revenue Formula</div>
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:20px;color:var(--gold)">POs x Avg VMs x $2,500</div>
+        <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-top:4px">$2,500 = estimated revenue value per VM migrated</div>
+      </div>
+      <div style="flex:1;min-width:240px">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Q1 Target</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text2)">160 POs</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:3px">Due Jun 12, 2026</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Q2 Target</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text2)">225 POs</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:3px">Due Sep 11, 2026</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Q3 Target</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text2)">255 POs</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:3px">Due Dec 11, 2026</div>
+          </div>
+          <div style="background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:11px;text-align:center">
+            <div style="font-family:'DM Mono',monospace;font-size:7.5px;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px">Q4 Target</div>
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:18px;color:var(--text2)">260 POs</div>
+            <div style="font-size:9px;color:var(--text3);margin-top:3px">Due Feb 20, 2027</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="note">Pipeline value is calculated as: number of POs delivered x average VMs per account x $2,500 per VM. Average VM count per account is drawn from qualification data captured during the NLPearl call and AEM form. Revenue figures will populate once PO delivery begins and ACE acceptance data is available. $2,500 per VM is the program-standard revenue assumption.</div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ EMAIL ═══════════════ -->
+<section id="email" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Eloqua Email Performance · Nurture Stream</div>
+    <div class="shr-t">Email — Consent &amp; Link Testing Underway</div>
+    <div class="shr-s">Email series 2 in final testing. Consent and link testing for both series targeting May 20. Full Eloqua launch including consent orchestration and scoring QA targeting June 1.</div>
+  </div>
+
+  <div class="al wa" style="margin-bottom:16px">
+    <span class="al-i">&#9888;</span>
+    <div class="al-t"><strong>Data Not Yet Connected.</strong> Eloqua email series 2 is in final testing, targeting completion May 18–19. Consent and link testing for both series is targeting May 20. Full Eloqua launch — including consent orchestration, contact level security (CLS), and scoring QA — is gating at June 1. Once live, this tab will surface opens, CTR, nurture sequence conversion, and email-sourced form fills.</div>
+  </div>
+
+  <div class="g3">
+    <div class="card" style="opacity:.5"><div class="kpi-meta">MET037 <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Email CVR</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Desired actions / email visits</div><div class="bm"><span class="bm-lbl">B2B tech benchmark</span><span class="bm-val">2.5%</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">Open Rate <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Open Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Awaiting Eloqua data feed</div><div class="bm"><span class="bm-lbl">B2B benchmark (inflated)</span><span class="bm-val">36–42%</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">CTOR <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Click-to-Open Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Clicks / unique opens</div><div class="bm"><span class="bm-lbl">Reliable engagement signal</span><span class="bm-val">use over open rate</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">CTR <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Click-Through Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Clicks / delivered</div><div class="bm"><span class="bm-lbl">B2B marketing email avg</span><span class="bm-val">2.0–3.2%</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">Nurture CVR <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Nurture to Form</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Email click through to form submit</div><div class="bm"><span class="bm-lbl">Email-sourced MQL rate</span><span class="bm-val">43–46%</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">Sends <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Total Sends</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Awaiting Eloqua data feed</div><div class="bm"><span class="bm-lbl">Cold outbound CTR (clean list)</span><span class="bm-val">~5.1%</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="sl"><span>Industry Email Benchmarks — B2B 2025 (Reference)</span></div>
+    <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);margin-bottom:14px">Sources: Powered by Search B2B Email Benchmarks 2025, SalesHive Digital Marketing Benchmarks 2025. These serve as targets once Eloqua data is connected.</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="bmt"><div class="bmt-lbl">B2B Open Rate</div><div class="bmt-val">36–42%</div><div class="bmt-sub">Privacy changes inflate opens. CTR is the more reliable signal.</div></div>
+      <div class="bmt"><div class="bmt-lbl">B2B CTR</div><div class="bmt-val">2.0–3.2%</div><div class="bmt-sub">Marketing emails. Cold B2B outbound reaches ~5.1% with clean lists.</div></div>
+      <div class="bmt"><div class="bmt-lbl">Email CVR (B2B Tech)</div><div class="bmt-val">2.5%</div><div class="bmt-sub">Click to desired action. Highly dependent on landing page quality.</div></div>
+      <div class="bmt"><div class="bmt-lbl">MQL Rate (Email-sourced)</div><div class="bmt-val">43–46%</div><div class="bmt-sub">Email-sourced leads convert to MQL at higher rate than paid. (FirstPageSage)</div></div>
+    </div>
+    <div class="note" style="margin-top:14px">Nexus email will be used primarily for nurture re-engagement of CS leads that did not qualify on intake. The key metric to watch will be nurture-to-form conversion rate. Track this as a distinct path and do not blend it with direct web traffic.</div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ WEB ═══════════════ -->
+<section id="web" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Adobe Analytics · AEM Pages · Tagging In Progress</div>
+    <div class="shr-t">Web — Analytics Tagging Handed Off</div>
+    <div class="shr-s">All three pages (landing, form, thank-you) live in A.COM production. Tags handed off to Umesh for manual implementation. Timeline is 1–2 days pending custom coding complexity.</div>
+  </div>
+
+  <div class="al wa" style="margin-bottom:16px">
+    <span class="al-i">&#9888;</span>
+    <div class="al-t"><strong>Adobe Analytics tagging handed off.</strong> All three AEM pages (landing page, form page, thank-you page) are live in A.COM production. Analytics tagging has been handed to Umesh for manual implementation — expected 1–2 days, potentially extended by custom coding on the pages.</div>
+  </div>
+
+  <div class="g3">
+    <div class="card" style="opacity:.5"><div class="kpi-meta">MET018 <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Total Sessions</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Adobe Analytics · L1 + L2 + Form page</div><div class="bm"><span class="bm-lbl">Pending AA tagging</span><span class="bm-val">—</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">MET035 <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">CVR — Website</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Form submits / sessions</div><div class="bm"><span class="bm-lbl">B2B visitor-to-lead avg</span><span class="bm-val">2–3% (LP: 4%+)</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">Form Start Rate <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Form Start Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Form starts / sessions on form page</div><div class="bm"><span class="bm-lbl">B2B form completion avg</span><span class="bm-val">50–70%</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">Form Completion Rate <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">Form Completion Rate</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Submits / form starts</div><div class="bm"><span class="bm-lbl">Nexus target</span><span class="bm-val">50%+ starts to submit</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">UTM Coverage <span class="dot warn"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">UTM Coverage %</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Sessions with UTM / total sessions. Target: 95%+</div><div class="bm"><span class="bm-lbl">Nexus hygiene SLA</span><span class="bm-val">95%+ required</span></div></div>
+    <div class="card" style="opacity:.5"><div class="kpi-meta">ECID Stitch Rate <span class="dot gap"></span></div><div class="kv" style="color:var(--text2)">--</div><div class="kl" style="color:var(--text2)">ECID-to-Eloqua Stitch</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Gap: ECID join not yet implemented</div><div class="bm"><span class="bm-lbl">Required for attribution</span><span class="bm-val">Priority #1 post-MVP</span></div></div>
+  </div>
+
+  <div class="card">
+    <div class="sl"><span>Web Measurement Setup Checklist</span></div>
+    <div class="chk-row"><div style="color:var(--teal)">&#10003;</div><div style="color:var(--text2)">AEM form POST to Eloqua confirmed working (Miguel/Jose)</div><div><span class="pill p-ok">Complete</span></div></div>
+    <div class="chk-row"><div style="color:var(--gold)">&#10003;</div><div style="color:var(--text2)">Adobe Analytics tagging on L1, L2, form, and thank-you pages (Umesh/Givi)</div><div><span class="pill p-warn">Complete, Pending Verification</span></div></div>
+    <div class="chk-row"><div style="color:var(--teal)">&#10003;</div><div style="color:var(--text2)">Thank-you page creation (complete — handed off to A.COM; conversion pixel implementation still pending)</div><div><span class="pill p-warn">Complete, Pixel Pending</span></div></div>
+    <div class="chk-row"><div style="color:var(--gold)">&#10003;</div><div style="color:var(--text2)">UTM generation via M+C Plan / Minitab tool (Sophie / Patrick Quateman) — approved, UTMs shared with creative and Allison</div><div><span class="pill p-warn">Complete, Embedding</span></div></div>
+    <div class="chk-row"><div style="color:var(--red)">&#10005;</div><div style="color:var(--text2)">ECID to Eloqua contact ID join (AIP+ integration priority #1)</div><div><span class="pill p-gap">Not started</span></div></div>
+    <div class="chk-row" style="border-bottom:none"><div style="color:var(--teal)">&#10003;</div><div style="color:var(--text2)">Adobe Analytics data access for John LeMieux and Justin Johnson</div><div><span class="pill p-ok">Complete</span></div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="sl"><span>Industry Web Benchmarks — B2B 2025 (Reference)</span></div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+      <div class="bmt"><div class="bmt-lbl">Visitor to Lead (B2B)</div><div class="bmt-val">2–3%</div><div class="bmt-sub">Avg across B2B sites. Dedicated lead-gen landing pages hit 4%+.</div></div>
+      <div class="bmt"><div class="bmt-lbl">Form Completion Rate</div><div class="bmt-val">50–70%</div><div class="bmt-sub">Starts to submits. Long or complex forms reduce this significantly.</div></div>
+      <div class="bmt"><div class="bmt-lbl">UTM Coverage Target</div><div class="bmt-val">95%+</div><div class="bmt-sub">Nexus SLA: alert if UTM-missing sessions exceed 5%.</div></div>
+      <div class="bmt"><div class="bmt-lbl">Scroll Depth (engagement)</div><div class="bmt-val">50%+</div><div class="bmt-sub">Target scroll to 50% on L1/L2 before CTA click event fires.</div></div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ CIP ═══════════════ -->
+<section id="cip" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Continuous Improvement Plan · April 2026</div>
+    <div class="shr-t">Governance Cadence — CIP</div>
+    <div class="shr-s">5 governance cadences from daily data review to bi-monthly retro · Compliance lead ownership pending</div>
+  </div>
+
+  <div class="g3">
+    <div class="card hi">
+      <div class="kpi-meta">Daily <span class="dot ok"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Performance + Data Review</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Owner</span> &nbsp;Data / Analytics Lead</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Format</span> &nbsp;Dashboard review — Eloqua, paid media, web, lead flow</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Output</span> &nbsp;Flagged risks, anomalies, optimization hypotheses</div>
+        <div style="margin-top:5px;color:var(--text3);font-size:10px">Escalation only — no decisions made at this cadence.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">Weekly <span class="dot ok"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">GTM Leadership Performance Review</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Owner</span> &nbsp;GTM Lead</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Participants</span> &nbsp;GTM team, data lead, media lead, PMO, Keilee</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Output</span> &nbsp;Prioritized focus areas, optimization opportunities, risk plans</div>
+        <div style="margin-top:5px;color:var(--text3);font-size:10px">Approve / reject optimization direction.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">Weekly shifting to Bi-weekly <span class="dot warn"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Campaign Strategy + Optimization Sync</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Owner</span> &nbsp;GTM Lead</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Participants</span> &nbsp;GTM team, creative, media, MarTech</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Output</span> &nbsp;A/B tests, messaging changes, creative updates</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="kpi-meta">Monthly <span class="dot warn"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">Compliance + Risk Checkpoint</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Owner</span> &nbsp;PMO / Compliance Lead (TBD)</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Participants</span> &nbsp;Compliance lead, GTM strategy, AI</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Inputs</span> &nbsp;Planned optimizations, consent language, contract</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Output</span> &nbsp;Green light or red light on updates</div>
+        <div style="margin-top:5px;color:var(--text3);font-size:10px">Ensures proposed optimizations do not create legal, consent, or contractual risk.</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="kpi-meta">Every Other Month <span class="dot warn"></span></div>
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:8px">CIP Retro + Roadmap Reset</div>
+      <div style="font-size:11px;color:var(--text2);line-height:1.7">
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Owner</span> &nbsp;GTM Lead</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Participants</span> &nbsp;Leadership, GTM team, workstream leads</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Format</span> &nbsp;Retro (stop/start/continue) + Roadmap alignment</div>
+        <div><span style="font-family:'DM Mono',monospace;font-size:9px;color:var(--px2)">Output</span> &nbsp;Updated internal documentation, finalized prioritization</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="sl"><span>CIP Cadence Overview — Project Nexus GTM (April 2026)</span></div>
+    <div class="tw">
+      <table class="tbl">
+        <thead><tr><th>Cadence</th><th>Frequency</th><th>Owner</th><th>Key Inputs</th><th>Decision Authority</th></tr></thead>
+        <tbody>
+          <tr><td>Performance + Data Review</td><td>Daily</td><td>Data / Analytics Lead</td><td>Dashboards, lead volume, conversion rates</td><td>Escalation only</td></tr>
+          <tr><td>GTM Leadership Performance Review</td><td>Weekly</td><td>GTM Lead</td><td>Weekly performance report, forecast vs actuals</td><td>Approve / reject optimization direction</td></tr>
+          <tr><td>Campaign Strategy + Optimization Sync</td><td>Weekly to Bi-weekly</td><td>GTM Lead</td><td>Leadership review notes, test results, creative insights</td><td>A/B tests, messaging changes, creative updates</td></tr>
+          <tr><td>Compliance + Risk Checkpoint</td><td>Monthly</td><td>PMO / Compliance (TBD)</td><td>Planned optimizations, consent language, contract</td><td>Green light or red light on updates</td></tr>
+          <tr><td>CIP Retro + Roadmap Reset</td><td>Every other month</td><td>GTM Lead</td><td>Performance trends, test outcomes, risk identification</td><td>Finalize stop / start / scale decisions</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:12px">Source: Project Nexus Continuous Improvement Plan — GTM, April 2026. Compliance lead ownership is pending confirmation. The Campaign Strategy sync starts weekly at launch and shifts to bi-weekly once cadence stabilizes.</div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ METRIC REGISTER ═══════════════ -->
+<section id="register" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Eloqua · Adobe Analytics · NLPearl · ACE</div>
+    <div class="shr-t">Metric Register — MVP + Operationally Necessary</div>
+    <div class="shr-s">All KPIs tracked across program infrastructure · Priority tiers: P1 launch-critical, P2 operational, P3 optimization</div>
+  </div>
+
+  <div class="card">
+    <div class="sl"><span>MVP + Operationally Necessary Metrics</span></div>
+    <div class="tw">
+      <table class="tbl">
+        <thead><tr><th>ID</th><th>Metric</th><th>Calculation</th><th>Source</th><th>Priority</th><th>Audience</th></tr></thead>
+        <tbody id="mtr-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ LEAD SCORING ═══════════════ -->
+<section id="scoring" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Eloqua Ratings Matrix · MVP Status</div>
+    <div class="shr-t">Lead Scoring — Fit vs Activity Model</div>
+    <div class="shr-s">MVP: Fit axis active only (A–D). Activity axis (1–4) designed but deferred post-launch. All routing driven by qualification criteria.</div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="sl"><span>Eloqua Ratings Matrix — Fit vs Activity</span></div>
+      <div style="margin-bottom:12px;font-size:11px;color:var(--text2);line-height:1.6">Eloqua scores on two independent axes. Fit (demographics) runs A–D. Activity (behavior) runs 1–4. For Nexus MVP, only the Fit axis is active — the Interest/Activity layer is designed and deferred post-launch.</div>
+      <div style="display:grid;grid-template-columns:36px repeat(4,1fr);gap:3px;font-family:'DM Mono',monospace;font-size:10px">
+        <div></div>
+        <div style="text-align:center;color:var(--text3);padding:4px">1<br><span style="font-size:8px">Low Act.</span></div>
+        <div style="text-align:center;color:var(--text3);padding:4px">2<br><span style="font-size:8px">Med Act.</span></div>
+        <div style="text-align:center;color:var(--text3);padding:4px">3<br><span style="font-size:8px">High Act.</span></div>
+        <div style="text-align:center;color:var(--text3);padding:4px">4<br><span style="font-size:8px">Top Act.</span></div>
+        <div style="display:flex;align-items:center;justify-content:center;color:var(--teal);font-weight:500">A</div>
+        <div style="background:rgba(0,229,192,.07);border:1px solid rgba(0,229,192,.2);border-radius:6px;padding:6px;text-align:center;color:var(--teal)">A1</div>
+        <div style="background:rgba(0,229,192,.13);border:1px solid rgba(0,229,192,.3);border-radius:6px;padding:6px;text-align:center;color:var(--teal)">A2</div>
+        <div style="background:rgba(0,229,192,.2);border:1px solid rgba(0,229,192,.4);border-radius:6px;padding:6px;text-align:center;color:var(--teal)">A3</div>
+        <div style="background:rgba(0,229,192,.28);border:1px solid rgba(0,229,192,.55);border-radius:6px;padding:6px;text-align:center;color:var(--teal);font-weight:700">A4 PO</div>
+        <div style="display:flex;align-items:center;justify-content:center;color:var(--px2);font-weight:500">B</div>
+        <div style="background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);border-radius:6px;padding:6px;text-align:center;color:var(--px2)">B1</div>
+        <div style="background:rgba(99,102,241,.13);border:1px solid rgba(99,102,241,.3);border-radius:6px;padding:6px;text-align:center;color:var(--px2)">B2</div>
+        <div style="background:rgba(99,102,241,.2);border:1px solid rgba(99,102,241,.4);border-radius:6px;padding:6px;text-align:center;color:var(--px2)">B3 MQP</div>
+        <div style="background:rgba(99,102,241,.26);border:1px solid rgba(99,102,241,.5);border-radius:6px;padding:6px;text-align:center;color:var(--px2)">B4 MQP</div>
+        <div style="display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:500">C</div>
+        <div style="background:rgba(251,191,36,.05);border:1px solid rgba(251,191,36,.15);border-radius:6px;padding:6px;text-align:center;color:var(--gold)">C1</div>
+        <div style="background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.2);border-radius:6px;padding:6px;text-align:center;color:var(--gold)">C2</div>
+        <div style="background:rgba(251,191,36,.12);border:1px solid rgba(251,191,36,.28);border-radius:6px;padding:6px;text-align:center;color:var(--gold)">C3 MEL</div>
+        <div style="background:rgba(251,191,36,.17);border:1px solid rgba(251,191,36,.35);border-radius:6px;padding:6px;text-align:center;color:var(--gold)">C4 MEL</div>
+        <div style="display:flex;align-items:center;justify-content:center;color:var(--text3);font-weight:500">D</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;text-align:center;color:var(--text3)">D1</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;text-align:center;color:var(--text3)">D2</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;text-align:center;color:var(--text3)">D3</div>
+        <div style="background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:6px;text-align:center;color:var(--text3)">D4 Nurture</div>
+      </div>
+      <div class="note">MVP status: Activity axis (columns 1–4) is not yet scored. All contacts land in column 1 by default until the behavior scoring layer is activated. Routing is driven entirely by fit criteria and qualification answers from the form or NLPearl call.</div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="sl"><span>Activity Scoring Weights (Designed — Not Yet Active)</span></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div><div class="sig-name">Qual. form submission with sales consent</div><div class="sig-pts" style="color:var(--red)">+20</div><div class="sig-tr"><div class="sig-fi" style="width:100%;background:var(--red);opacity:.7"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></div><div class="sig-name">HQL content interaction</div><div class="sig-pts" style="color:var(--gold)">+5</div><div class="sig-tr"><div class="sig-fi" style="width:25%;background:var(--gold);opacity:.8"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--gold);box-shadow:0 0 5px var(--gold)"></div><div class="sig-name">Form submission without sales consent</div><div class="sig-pts" style="color:var(--gold)">+5</div><div class="sig-tr"><div class="sig-fi" style="width:25%;background:var(--gold);opacity:.8"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--px);box-shadow:0 0 5px var(--px)"></div><div class="sig-name">Downloads / Event registration</div><div class="sig-pts" style="color:var(--px)">+3</div><div class="sig-tr"><div class="sig-fi" style="width:15%;background:var(--px);opacity:.8"></div></div></div>
+        <div class="sig-row"><div class="sig-dot" style="background:var(--px2);box-shadow:0 0 5px var(--px2)"></div><div class="sig-name">Email CTA click</div><div class="sig-pts" style="color:var(--px2)">+1</div><div class="sig-tr"><div class="sig-fi" style="width:5%;background:var(--px2);opacity:.8"></div></div></div>
+        <div class="sig-row" style="margin-bottom:0"><div class="sig-dot" style="background:var(--px2)"></div><div class="sig-name">Web views</div><div class="sig-pts" style="color:var(--px2)">+1</div><div class="sig-tr"><div class="sig-fi" style="width:5%;background:var(--px2);opacity:.8"></div></div></div>
+        <div class="note">Email opens are intentionally excluded. Eloqua's Auto Open adjustment helps filter privacy-enabled opens, but clicks carry more signal reliability.</div>
+      </div>
+      <div class="card">
+        <div class="sl"><span>Negative / Reset Signals</span></div>
+        <div style="font-size:11px;color:var(--text2);line-height:1.9">
+          <div style="padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:8px"><span style="color:var(--red)">-</span>No activity for X days — score reset or decay</div>
+          <div style="padding:4px 0;border-bottom:1px solid var(--border);display:flex;gap:8px"><span style="color:var(--red)">-</span>Unsubscribe / opt-out — score reset to 0</div>
+          <div style="padding:4px 0;display:flex;gap:8px"><span style="color:var(--red)">-</span>Recycle stage — score reset to 0, re-enter nurture</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</section>
+
+<!-- ═══════════════ GLOSSARY ═══════════════ -->
+<section id="glossary" class="sec">
+
+  <div class="shr">
+    <div class="shr-ey">Program Reference · Accenture Song / AWS</div>
+    <div class="shr-t">Glossary — Terms, Acronyms, and Systems</div>
+    <div class="shr-s">All key terms, acronyms, and systems referenced across the Nexus demand platform</div>
+  </div>
+
+  <input class="gl-search" id="gl-search" type="text" placeholder="Search terms, acronyms, systems..." autocomplete="off">
+
+  <div class="gl-section" id="gls-program">
+    <div class="gl-section-hd">Program and pipeline terms</div>
+    <div class="gl-grid">
+      <div class="gl-item"><div class="gl-term">Nexus <span class="gl-tag t-prog">Program</span></div><div class="gl-def">The Accenture Song demand generation program built for AWS. Its goal is to generate and qualify VMware-to-AWS migration leads from Sub-Large Enterprise companies (fewer than 2,000 VMs) and hand them to the AWS sales team via the ACE pipeline. All infrastructure is Accenture-owned until the ACE handoff.</div></div>
+      <div class="gl-item"><div class="gl-term">MEL <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Marketing Eligible Lead. A contact who has cleared the disqualification gate, has marketing consent, and has been classified as eligible for nurture or calling. MEL is a lifecycle stage in Eloqua, not a quality tier — it means the contact is in-program and routing has been assigned. Used for contacts with marketing consent who have not yet qualified for sales engagement.</div></div>
+      <div class="gl-item"><div class="gl-term">MQP <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Marketing Qualified Pipeline. A MEL who has VMware confirmed, sales + AI consent, a phone number, and a timezone/state. MQPs are routed to NLPearl for AI outbound calling. Partial qualification data that does not meet threshold does not advance to MQP — the stage gates who gets called, not who is ultimately qualified.</div></div>
+      <div class="gl-item"><div class="gl-term">PO <span class="gl-tag t-prog">Stage</span></div><div class="gl-def">Partner Opportunity. A contact who has passed the ACE Readiness Gate: 100+ VMs, migration timeline under 18 months, and full sales + AI consent. POs are the deliverable handed to the AWS sales team via the ACE pipeline. Target for the full program is 900 POs over 4 quarters.</div></div>
+      <div class="gl-item"><div class="gl-term">ACE <span class="gl-tag t-sys">System</span></div><div class="gl-def">AWS Customer Engagement. The partner portal where Accenture registers qualified migration opportunities for the AWS sales team. ACE upload is currently a manual process — REST API automation is the target state. First ACE upload is being prepared as of May 26 by Connor, Ian, and Paulo. 0 POs uploaded to date.</div></div>
+      <div class="gl-item"><div class="gl-term">AIP+ <span class="gl-tag t-sys">System</span></div><div class="gl-def">Accenture Insights Platform Plus. Cloud-based analytics-as-a-service that serves as the cross-system signal unification layer for Nexus. AIP+ is the target destination for the ECID-to-Eloqua contact ID join, which is the #1 measurement infrastructure priority post-MVP.</div></div>
+      <div class="gl-item"><div class="gl-term">NLPearl <span class="gl-tag t-sys">System</span></div><div class="gl-def">AI-powered outbound voice agent that calls MQP-stage contacts. NLPearl conducts structured qualification conversations, captures VM count, migration timeline, and consent confirmation. Call results are written back to Eloqua as field updates that trigger MEL or PO routing.</div></div>
+      <div class="gl-item"><div class="gl-term">ECID <span class="gl-tag t-sys">ID</span></div><div class="gl-def">Experience Cloud ID. Adobe's cross-device persistent identifier assigned by Adobe Analytics when a visitor lands on an AEM page. The ECID-to-Eloqua contact ID join is the critical missing link that would allow behavioral web data to be attributed to known contacts in Eloqua. Not yet implemented.</div></div>
+      <div class="gl-item"><div class="gl-term">MAP <span class="gl-tag t-prog">Program</span></div><div class="gl-def">Migration Acceleration Program. AWS's partner incentive program that provides funding and resources for customers migrating workloads to AWS. Nexus leads who qualify as POs may be eligible for MAP benefits, which the AWS sales team and migration partners manage after the ACE handoff.</div></div>
+      <div class="gl-item"><div class="gl-term">CTOR <span class="gl-tag t-met">Metric</span></div><div class="gl-def">Click-to-Open Rate. The percentage of email recipients who opened the email and then clicked a link. Calculated as clicks divided by unique opens. CTOR is a more reliable engagement signal than open rate alone because it filters out privacy-enabled auto-opens and measures intent among those who actually viewed the content.</div></div>
+      <div class="gl-item"><div class="gl-term">Sub-Large Enterprise <span class="gl-tag t-prog">Segment</span></div><div class="gl-def">Nexus's target customer segment: companies running fewer than 2,000 VMware VMs. These accounts are too large for the standard self-service AWS migration path but too small for the enterprise white-glove engagement model. The ~$20B TAM comes from this segment.</div></div>
+      <div class="gl-item"><div class="gl-term">HQL <span class="gl-tag t-prog">Lead Type</span></div><div class="gl-def">Human-Qualified Lead. A lead type on the TechTarget / NetLine content syndication platform where a vendor representative has confirmed the lead's accuracy and relevance via a direct conversation before delivery. All 95 NetLine leads from the May 7–12 batch were HQL at lead score 4.</div></div>
+      <div class="gl-item"><div class="gl-term">TechTarget <span class="gl-tag t-prog">Vendor</span></div><div class="gl-def">A B2B content syndication publisher similar to NetLine, used to distribute Nexus content assets to targeted IT audiences. Generates inbound leads with pre-captured marketing consent.</div></div>
+      <div class="gl-item"><div class="gl-term">Adobe Launch <span class="gl-tag t-sys">System</span></div><div class="gl-def">The tag management layer used to deploy and manage Adobe Analytics tracking on AEM pages. Responsible for firing page view and event tracking including form interactions, clicks, and UTM capture. Adobe Launch intercepts UTM parameters on page load and persists them as cookies, making them available as dimensions within Adobe Analytics for attribution reporting. Required for enabling behavioral data collection feeding Adobe Analytics. Tagging work is owned by Allison Melendez's team.</div></div>
+      <div class="gl-item"><div class="gl-term">Unknown Visitor Data <span class="gl-tag t-sys">Data Type</span></div><div class="gl-def">Anonymous behavioral data captured by Adobe Analytics for visitors without an identified contact record (no Eloqua ID). Includes page views, click events, session activity, and UTM-based attribution tied to ECID. Once a visitor submits a form, this unknown history becomes joinable to a known Eloqua contact record, enabling partial reconstruction of pre-conversion behavior. For Nexus MVP, ingestion of this anonymous behavioral data into AIP+ is dependent on Adobe Analytics tagging and integration enablement, which is currently not fully active.</div></div>
+      <div class="gl-item"><div class="gl-term">Data Reconciliation / Integrity Controls <span class="gl-tag t-prog">Process</span></div><div class="gl-def">Processes that validate consistency across CS batch files, Eloqua contact creation (upsert_contact), NLPearl call results, and ACE submissions. Primary control: row-count reconciliation between intake and system-of-record objects.</div></div>
+    </div>
+  </div>
+
+  <div class="gl-section" id="gls-metrics">
+    <div class="gl-section-hd">Key metrics</div>
+    <div class="gl-grid">
+      <div class="gl-item"><div class="gl-term">MET001 — Funnel Volume <span class="gl-tag t-met">Metric</span></div><div class="gl-def">Total count of contacts actively in the Nexus pipeline at any given time. Includes all lifecycle stages from Known through PO minus DQ'd records. As of May 26: 264 (169 Eloqua in-flight + 95 new NetLine leads pending intake).</div></div>
+      <div class="gl-item"><div class="gl-term">MET056 — Pickup Rate <span class="gl-tag t-met">Metric</span></div><div class="gl-def">Percentage of NLPearl call attempts where the contact answered the phone. Calculated as connected calls divided by total attempts. Peak week (Apr 27): 24% (44 of 183). The B2B average is 3–10%, making Nexus's rate a strong positive signal.</div></div>
+      <div class="gl-item"><div class="gl-term">MET062 — Speed-to-Call SLA <span class="gl-tag t-met">Metric</span></div><div class="gl-def">The percentage of MQP-stage contacts for whom NLPearl initiated a call attempt within 24 hours of the contact reaching MQP status. Currently 100% compliant. Industry research shows leads contacted within 1 hour convert at 53% vs 17% at 24h — tightening this SLA is the next leverage point.</div></div>
+      <div class="gl-item"><div class="gl-term">MET054 — Call Signal <span class="gl-tag t-met">Metric</span></div><div class="gl-def">The outcome tag applied by NLPearl after a connected call. Four categories: Strong (PO candidate — 100+ VMs, under 18mo timeline, consent), Weak (monitor / re-attempt), Negative (recycle), No Connect. As of Apr 27 week: 17 Strong, 20 Weak, 0 Negative, 6 No Connect.</div></div>
+    </div>
+  </div>
+
+</section>
+<!-- ═══════════════ CHANGELOG ═══════════════ -->
+<div id="changelog-section">
+  <div class="card">
+    <div class="cl-header">&#9998; Edit Changelog — Changes Made This Session</div>
+    <div id="cl-empty-msg" class="cl-empty">No changes recorded yet. Enter Edit Mode and update any field to begin tracking.</div>
+    <div id="cl-table" style="display:none;border:1px solid var(--border);border-radius:var(--r);overflow:hidden">
+      <div class="cl-head-row"><span>Timestamp</span><span>Field</span><span>Previous Value</span><span>New Value</span></div>
+      <div id="cl-rows"></div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<script>
+/* ── NAV ─────────────────────────────────────────────────────────────────── */
+function show(id){
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('on'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('on'));
+  const sec=document.getElementById(id);
+  if(sec) sec.classList.add('on');
+  document.querySelectorAll('.ni').forEach(n=>{
+    if(n.getAttribute('onclick')==="show('"+id+"')") n.classList.add('on');
+  });
+  requestAnimationFrame(()=>{ drawChartsFor(id); });
+}
+
+/* ── THEME ─────────────────────────────────────────────────────────────── */
+function tDark(){
+  const h=document.documentElement;
+  h.setAttribute('data-theme',h.getAttribute('data-theme')==='light'?'dark':'light');
+}
+
+/* ── SEARCH ─────────────────────────────────────────────────────────────── */
+const sectionIndex=[
+  {id:'summary',   terms:'summary funnel volume qualification rate target progress pickup rate sla kpi overview'},
+  {id:'funnel',    terms:'funnel age lifecycle stage known mel mqp po validation attrition dwell gate disqualification'},
+  {id:'ai',        terms:'ai calls nlpearl pickup rate attempts connected signal strong weak sentiment opt-out credits sla call'},
+  {id:'cs',        terms:'campaign reporting netline techTarget content syndication leads consent cfo revenue employee industry vmware migration drivers states geography hql'},
+  {id:'targets',   terms:'targets pace burndown velocity quarterly q1 q2 q3 q4 900 po weekly required'},
+  {id:'email',     terms:'email ctr ctor open rate nurture eloqua sends cvr click'},
+  {id:'web',       terms:'web sessions adobe analytics utm ecid form completion cvr conversion pixel aem'},
+  {id:'cip',       terms:'cip continuous improvement plan cadence governance retro compliance review weekly daily'},
+  {id:'scoring',   terms:'lead scoring eloqua fit activity matrix a1 a4 b mql nurture weights decay reset behavior'},
+  {id:'register',  terms:'metric register met001 met003 met004 met018 met035 met054 met055 met056 met062 priority p1 p2 p3'},
+  {id:'glossary',  terms:'glossary mel mqp po ace aip nlpearl ecid map ctor hql sub-large enterprise terms acronyms'},
+];
+
+function gSearch(v){
+  const q=v.trim().toLowerCase();
+  const nis=document.querySelectorAll('.ni');
+  if(!q){
+    nis.forEach(n=>n.style.opacity='');
+    return;
+  }
+  let bestId=null, bestScore=0;
+  sectionIndex.forEach(s=>{
+    const score=q.split(' ').reduce((acc,word)=>acc+(s.terms.includes(word)?1:0),0) +
+                (s.terms.includes(q)?2:0);
+    if(score>bestScore){bestScore=score;bestId=s.id;}
+  });
+  nis.forEach(n=>{
+    const onclick=n.getAttribute('onclick')||'';
+    const match=sectionIndex.some(s=>onclick.includes(s.id) && (s.terms.includes(q) || q.split(' ').some(w=>s.terms.includes(w))));
+    n.style.opacity=match?'1':'0.35';
+  });
+  if(bestId) show(bestId);
+}
+
+/* ── CANVAS HELPER ─────────────────────────────────────────────────────── */
+function ctx(id){
+  const el=document.getElementById(id);
+  if(!el) return null;
+  const dpr=window.devicePixelRatio||1;
+  const W=el.offsetWidth||el.width;
+  const H=el.offsetHeight||el.height;
+  el.width=W*dpr; el.height=H*dpr;
+  const c=el.getContext('2d');
+  c.scale(dpr,dpr);
+  c.W=W; c.H=H;
+  return c;
+}
+
+/* ── TREND CHART ─────────────────────────────────────────────────────────── */
+function drawTrend(){
+  const c=ctx('c-trend'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:26,l:34};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const weeks=CT.weeks;
+  const mel=CT.mel,mqp=CT.mqp,po=CT.po;
+  const maxY=80;
+  c.clearRect(0,0,W,H);
+  [0,20,40,60,80].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v,pad.l-4,y+3);
+  });
+  const xs=weeks.map((_,i)=>pad.l+(i/(weeks.length-1))*cw);
+  [[mel,'#6366f1'],[mqp,'#fbbf24'],[po,'#f87171']].forEach(([data,col])=>{
+    c.beginPath();c.strokeStyle=col;c.lineWidth=2;c.setLineDash([]);
+    data.forEach((v,i)=>{
+      const x=xs[i],y=pad.t+ch-(v/maxY)*ch;
+      i===0?c.moveTo(x,y):c.lineTo(x,y);
+    });
+    c.stroke();
+    data.forEach((v,i)=>{
+      c.beginPath();c.arc(xs[i],pad.t+ch-(v/maxY)*ch,3,0,Math.PI*2);
+      c.fillStyle=col;c.fill();
+    });
+  });
+  weeks.forEach((w,i)=>{
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(w,xs[i],H-4);
+  });
+  [['#6366f1','MEL'],['#fbbf24','MQP'],['#f87171','PO']].forEach(([col,lbl],i)=>{
+    c.fillStyle=col;c.fillRect(pad.l+i*70,pad.t-12,10,2);
+    c.fillStyle='#94a3b8';c.font='8px DM Sans,sans-serif';c.textAlign='left';
+    c.fillText(lbl,pad.l+i*70+13,pad.t-8);
+  });
+}
+
+/* ── PICKUP CHART ─────────────────────────────────────────────────────────── */
+function drawPickup(){
+  const c=ctx('c-pickup'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:26,l:34};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const weeks=CP.weeks;
+  const rates=CP.rates;
+  const maxY=40;
+  c.clearRect(0,0,W,H);
+  [0,10,20,30,40].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v+'%',pad.l-4,y+3);
+  });
+  const bw=(cw/weeks.length)*0.55;
+  rates.forEach((v,i)=>{
+    const x=pad.l+(i+0.5)*(cw/weeks.length)-bw/2;
+    const bh=(v/maxY)*ch;
+    const col=v>=15?'#00e5c0':v>0?'#fbbf24':'#1a1a2e';
+    c.fillStyle=col+'cc';c.shadowColor=v>0?col:'transparent';c.shadowBlur=v>0?8:0;
+    if(bh>2){c.beginPath();c.roundRect?c.roundRect(x,pad.t+ch-bh,bw,bh,3):c.rect(x,pad.t+ch-bh,bw,bh);c.fill();}
+    else{c.fillStyle='#1e1e2e';c.fillRect(x,pad.t+ch-2,bw,2);}
+    c.shadowBlur=0;
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(weeks[i],x+bw/2,H-4);
+    if(v>0){c.fillStyle=col;c.font='bold 9px DM Mono,monospace';c.fillText(v+'%',x+bw/2,pad.t+ch-bh-5);}
+  });
+}
+
+/* ── AGE CHART ─────────────────────────────────────────────────────────── */
+function drawAge(){
+  const c=ctx('c-age'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:40,l:100};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const stages=[['Unknown','—',0,'#374151'],['Known','Avg '+AG.known_h+'h',AG.known_h,'#818cf8'],['Validation','Avg '+AG.validation_h+'h',AG.validation_h,'#fbbf24'],['MEL','Avg '+AG.mel_h+'h',AG.mel_h,'#6366f1'],['PO',AG.po_h===0?'0':AG.po_h+'h',AG.po_h,'#f87171']];
+  const maxX=35;
+  c.clearRect(0,0,W,H);
+  const bh=(ch/stages.length)*0.6,gap=(ch/stages.length)*0.4;
+  stages.forEach(([name,label,val,col],i)=>{
+    const y=pad.t+i*(bh+gap);
+    c.fillStyle='#1a1a2e';c.beginPath();c.roundRect?c.roundRect(pad.l,y,cw,bh,3):c.rect(pad.l,y,cw,bh);c.fill();
+    if(val>0){
+      const fw=(val/maxX)*cw;
+      c.fillStyle=col+'cc';c.shadowColor=col;c.shadowBlur=6;
+      c.beginPath();c.roundRect?c.roundRect(pad.l,y,fw,bh,3):c.rect(pad.l,y,fw,bh);c.fill();
+      c.shadowBlur=0;
+    }
+    c.fillStyle=col;c.font='bold 10px DM Mono,monospace';c.textAlign='right';
+    c.fillText(name,pad.l-8,y+bh/2+4);
+    c.fillStyle=col;c.font='10px DM Mono,monospace';c.textAlign='left';
+    c.fillText(label,pad.l+(val/maxX)*cw+6,y+bh/2+4);
+  });
+  const sla=(24/maxX)*cw;
+  c.beginPath();c.strokeStyle='#f87171aa';c.lineWidth=1.5;c.setLineDash([5,3]);
+  c.moveTo(pad.l+sla,pad.t-6);c.lineTo(pad.l+sla,pad.t+ch+6);c.stroke();c.setLineDash([]);
+  c.fillStyle='#f87171';c.font='8px DM Mono,monospace';c.textAlign='center';
+  c.fillText('24h SLA',pad.l+sla,pad.t-9);
+}
+
+/* ── CALLS CHART ─────────────────────────────────────────────────────────── */
+function drawCalls(){
+  const c=ctx('c-calls'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:28,l:38};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const weeks=['Apr 13','Apr 20','Apr 27','May 4','May 12'];
+  const attempts=[0,56,183,0,0],connected=[0,0,44,0,0];
+  const maxY=200;
+  c.clearRect(0,0,W,H);
+  [0,50,100,150,200].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v,pad.l-4,y+3);
+  });
+  const grp=cw/weeks.length,bw=grp*0.3;
+  weeks.forEach((_,i)=>{
+    const xc=pad.l+i*grp+grp/2;
+    [[attempts[i],'#6366f188',bw],[connected[i],'#00e5c0cc',bw]].forEach(([v,col,w],j)=>{
+      if(v>0){
+        const bh=(v/maxY)*ch;
+        c.fillStyle=col;
+        c.beginPath();c.roundRect?c.roundRect(xc+(j-0.5)*w-w/2-2,pad.t+ch-bh,w,bh,2):c.rect(xc+(j-0.5)*w-w/2-2,pad.t+ch-bh,w,bh);c.fill();
+      }
+    });
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(weeks[i],xc,H-4);
+  });
+  [['#6366f1','Attempts'],['#00e5c0','Connected']].forEach(([col,lbl],i)=>{
+    c.fillStyle=col;c.fillRect(pad.l+i*90,pad.t-12,10,2);
+    c.fillStyle='#94a3b8';c.font='8px DM Sans,sans-serif';c.textAlign='left';
+    c.fillText(lbl,pad.l+i*90+13,pad.t-8);
+  });
+}
+
+/* ── VM SIZE CHART ─────────────────────────────────────────────────────── */
+function drawVMSize(){
+  const c=ctx('c-vmsize'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:16,r:14,b:28,l:100};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const data=[['100-249 VMs',74,78,'#6366f1'],['250-499 VMs',17,18,'#818cf8'],['1000-1999 VMs',4,4,'#00e5c0']];
+  c.clearRect(0,0,W,H);
+  const bh=(ch/data.length)*0.6,gap=(ch/data.length)*0.4;
+  data.forEach(([name,val,pct,col],i)=>{
+    const y=pad.t+i*(bh+gap);
+    c.fillStyle='#1a1a2e';c.beginPath();c.roundRect?c.roundRect(pad.l,y,cw,bh,3):c.rect(pad.l,y,cw,bh);c.fill();
+    const fw=(pct/100)*cw;
+    c.fillStyle=col+'cc';c.shadowColor=col;c.shadowBlur=5;
+    c.beginPath();c.roundRect?c.roundRect(pad.l,y,fw,bh,3):c.rect(pad.l,y,fw,bh);c.fill();
+    c.shadowBlur=0;
+    c.fillStyle=col;c.font='9px DM Mono,monospace';c.textAlign='right';
+    c.fillText(name,pad.l-6,y+bh/2+3);
+    c.fillStyle=col;c.font='bold 9px DM Mono,monospace';c.textAlign='left';
+    c.fillText(val+' ('+pct+'%)',pad.l+fw+5,y+bh/2+3);
+  });
+}
+
+/* ── TIMELINE CHART ─────────────────────────────────────────────────────── */
+function drawTimelineChart(){
+  const c=ctx('c-timeline'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:16,r:14,b:28,l:120};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const data=[['6-12 months',35,37,'#fbbf24'],['12-18 months',59,62,'#6366f1'],['18+ months',1,1,'#64748b']];
+  c.clearRect(0,0,W,H);
+  const bh=(ch/data.length)*0.6,gap=(ch/data.length)*0.4;
+  data.forEach(([name,val,pct,col],i)=>{
+    const y=pad.t+i*(bh+gap);
+    c.fillStyle='#1a1a2e';c.beginPath();c.roundRect?c.roundRect(pad.l,y,cw,bh,3):c.rect(pad.l,y,cw,bh);c.fill();
+    const fw=(pct/100)*cw;
+    c.fillStyle=col+'cc';c.shadowColor=col;c.shadowBlur=5;
+    c.beginPath();c.roundRect?c.roundRect(pad.l,y,fw,bh,3):c.rect(pad.l,y,fw,bh);c.fill();
+    c.shadowBlur=0;
+    c.fillStyle=col;c.font='9px DM Mono,monospace';c.textAlign='right';
+    c.fillText(name,pad.l-6,y+bh/2+3);
+    c.fillStyle=col;c.font='bold 9px DM Mono,monospace';c.textAlign='left';
+    c.fillText(val+' ('+pct+'%)',pad.l+fw+5,y+bh/2+3);
+  });
+}
+
+/* ── STATES CHART ─────────────────────────────────────────────────────── */
+function drawStates(){
+  const c=ctx('c-states'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:16,r:14,b:28,l:50};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const data=[['CA',12,'#6366f1'],['NY',11,'#818cf8'],['TX',8,'#00e5c0'],['VA',6,'#fbbf24'],['MD',4,'#f87171'],['PA',3,'#a5b4fc'],['SC',3,'#67e8f9'],['AZ',3,'#86efac']];
+  const maxV=12;
+  c.clearRect(0,0,W,H);
+  const bw=cw/data.length*0.65;
+  data.forEach((d,i)=>{
+    const x=pad.l+i*(cw/data.length)+(cw/data.length)*0.175;
+    const bh=(d[1]/maxV)*ch;
+    c.fillStyle=d[2]+'cc';c.shadowColor=d[2];c.shadowBlur=5;
+    c.beginPath();c.roundRect?c.roundRect(x,pad.t+ch-bh,bw,bh,2):c.rect(x,pad.t+ch-bh,bw,bh);c.fill();
+    c.shadowBlur=0;
+    c.fillStyle=d[2];c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(d[0],x+bw/2,pad.t+ch+10);
+    c.fillStyle=d[2];c.font='bold 8px DM Mono,monospace';
+    c.fillText(d[1],x+bw/2,pad.t+ch-bh-4);
+  });
+}
+
+/* ── BURNDOWN CHART ─────────────────────────────────────────────────────── */
+function drawBurndown(){
+  const c=ctx('c-burndown'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:22,r:14,b:28,l:40};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const weeks=['May 26','Jun 2','Jun 9','Jun 12'];
+  const ideal=[160,128,96,64,32,0];
+  const actual=[160,160,160,160,160,160];
+  const maxY=180;
+  c.clearRect(0,0,W,H);
+  [0,40,80,120,160].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v,pad.l-4,y+3);
+  });
+  const xs=weeks.map((_,i)=>pad.l+(i/(weeks.length-1))*cw);
+  // Ideal fill
+  c.beginPath();xs.forEach((x,i)=>c.lineTo(x,pad.t+ch-(ideal[i]/maxY)*ch));
+  c.lineTo(xs[xs.length-1],pad.t+ch);c.lineTo(xs[0],pad.t+ch);c.closePath();
+  c.fillStyle='rgba(99,102,241,.06)';c.fill();
+  // Ideal line
+  c.beginPath();c.strokeStyle='#6366f1';c.lineWidth=2;c.setLineDash([6,3]);
+  xs.forEach((x,i)=>{i===0?c.moveTo(x,pad.t+ch-(ideal[i]/maxY)*ch):c.lineTo(x,pad.t+ch-(ideal[i]/maxY)*ch);});
+  c.stroke();c.setLineDash([]);
+  // Actual line
+  c.beginPath();c.strokeStyle='#f87171';c.lineWidth=2;
+  xs.forEach((x,i)=>{i===0?c.moveTo(x,pad.t+ch-(actual[i]/maxY)*ch):c.lineTo(x,pad.t+ch-(actual[i]/maxY)*ch);});
+  c.stroke();
+  weeks.forEach((w,i)=>{
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(w,xs[i],H-4);
+  });
+  [['#6366f1','Ideal pace (40 POs/wk)','dashed'],['#f87171','Actual (0 delivered)','solid']].forEach(([col,lbl,style],i)=>{
+    if(style==='dashed'){c.setLineDash([5,2]);} else {c.setLineDash([]);}
+    c.beginPath();c.strokeStyle=col;c.lineWidth=1.5;
+    c.moveTo(pad.l+i*180,pad.t-8);c.lineTo(pad.l+i*180+14,pad.t-8);c.stroke();c.setLineDash([]);
+    c.fillStyle='#94a3b8';c.font='8px DM Sans,sans-serif';c.textAlign='left';
+    c.fillText(lbl,pad.l+i*180+18,pad.t-4);
+  });
+}
+
+/* ── VELOCITY CHART ─────────────────────────────────────────────────────── */
+function drawVelocity(){
+  const c=ctx('c-velocity'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:28,l:34};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const data=[{week:'Apr 13',pos:0},{week:'Apr 20',pos:0},{week:'Apr 27',pos:0},{week:'May 4',pos:0},{week:'May 12',pos:0}];
+  const maxY=50,bw=(cw/data.length)*0.55;
+  const reqY=pad.t+ch-(32/maxY)*ch;
+  c.clearRect(0,0,W,H);
+  [0,10,20,30,32,40,50].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v,pad.l-4,y+3);
+  });
+  c.beginPath();c.strokeStyle='#fbbf2488';c.lineWidth=1.5;c.setLineDash([5,3]);
+  c.moveTo(pad.l,reqY);c.lineTo(pad.l+cw,reqY);c.stroke();c.setLineDash([]);
+  c.fillStyle='#fbbf24';c.font='8px DM Mono,monospace';c.textAlign='right';
+  c.fillText('32 req.',pad.l+cw,reqY-3);
+  data.forEach((d,i)=>{
+    const x=pad.l+(i+0.5)*(cw/data.length)-bw/2;
+    c.fillStyle='#334155';c.beginPath();c.setLineDash([3,3]);
+    c.moveTo(x,pad.t+ch);c.lineTo(x+bw,pad.t+ch);c.stroke();c.setLineDash([]);
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='center';
+    c.fillText(d.week,x+bw/2,H-4);
+  });
+}
+
+/* ── TARGETS CHART ─────────────────────────────────────────────────────── */
+function drawTargetsChart(){
+  const c=ctx('c-targets-chart'); if(!c) return;
+  const W=c.W,H=c.H,pad={t:20,r:14,b:28,l:38};
+  const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+  const quarters=['Q1 (160)','Q2 (225)','Q3 (255)','Q4 (260)'];
+  const cumTarget=[160,385,640,900];
+  const cumActual=[0,0,0,0];
+  const maxY=1000;
+  c.clearRect(0,0,W,H);
+  [0,250,500,750,900].forEach(v=>{
+    const y=pad.t+ch-(v/maxY)*ch;
+    c.beginPath();c.strokeStyle='rgba(255,255,255,.05)';c.lineWidth=1;
+    c.moveTo(pad.l,y);c.lineTo(pad.l+cw,y);c.stroke();
+    c.fillStyle='#64748b';c.font='8px DM Mono,monospace';c.textAlign='right';
+    c.fillText(v,pad.l-4,y+3);
+  });
+  const xs=quarters.map((_,i)=>pad.l+(i/(quarters.length-1))*cw);
+  // Target line
+  c.beginPath();c.strokeStyle='#6366f1';c.lineWidth=1.5;c.setLineDash([5,3]);
+  xs.forEach((x,i)=>{i===0?c.moveTo(x,pad.t+ch-(cumTarget[i]/maxY)*ch):c.lineTo(x,pad.t+ch-(cumTarget[i]/maxY)*ch);});
+  c.stroke();c.setLineDash([]);
+  // Actual (flat at 0)
+  c.beginPath();c.strokeStyle='#f87171';c.lineWidth=2;
+  xs.forEach((x,i)=>{i===0?c.moveTo(x,pad.t+ch-(cumActual[i]/maxY)*ch):c.lineTo(x,pad.t+ch-(cumActual[i]/maxY)*ch);});
+  c.stroke();
+  quarters.forEach((q,i)=>{
+    c.fillStyle='#64748b';c.font='7px DM Mono,monospace';c.textAlign='center';
+    c.fillText(q,xs[i],H-4);
+  });
+}
+
+/* ── CHART DISPATCH ─────────────────────────────────────────────────────── */
+function drawChartsFor(id){
+  if(id==='summary'){drawTrend();drawPickup();}
+  if(id==='funnel'){drawAge();}
+  if(id==='ai'){drawCalls();}
+  if(id==='cs'){drawVMSize();drawTimelineChart();drawStates();}
+  if(id==='targets'){drawBurndown();drawVelocity();drawTargetsChart();}
+}
+
+/* ── METRIC REGISTER TABLE ─────────────────────────────────────────────── */
+const metrics=[
+  {id:'MET001',name:'Funnel Volume',calc:'Count contacts in lifecycle stages Known through PO',src:'Eloqua',pri:'P1',aud:'Program'},
+  {id:'MET002',name:'Funnel Velocity (Avg Stage Age)',calc:'Avg hours contacts spend in each lifecycle stage',src:'Eloqua',pri:'P1',aud:'Program'},
+  {id:'MET003',name:'Qualification Rate',calc:'POs created / MELs entered',src:'Eloqua',pri:'P1',aud:'Program'},
+  {id:'MET004',name:'Target Progress — Q1',calc:'POs created / 160 target',src:'Eloqua / ACE',pri:'P1',aud:'Leadership'},
+  {id:'MET018',name:'Total Sessions',calc:'All sessions on L1, L2, form page',src:'Adobe Analytics',pri:'P1',aud:'Media'},
+  {id:'MET035',name:'CVR — Website',calc:'Form submits / total sessions',src:'Adobe Analytics',pri:'P1',aud:'Media'},
+  {id:'MET037',name:'Email CVR',calc:'Desired actions / email visits',src:'Eloqua',pri:'P2',aud:'Media'},
+  {id:'MET054',name:'AI Call Signal Distribution',calc:'Count per outcome tag (Strong / Weak / Negative / No Connect)',src:'NLPearl',pri:'P1',aud:'Program'},
+  {id:'MET055',name:'AI Calls Attempted',calc:'Total call attempts per week',src:'NLPearl',pri:'P1',aud:'Program'},
+  {id:'MET056',name:'Pickup Rate',calc:'Connected calls / call attempts',src:'NLPearl',pri:'P1',aud:'Program'},
+  {id:'MET057',name:'Avg Call Duration',calc:'Total talk time / connected calls',src:'NLPearl',pri:'P2',aud:'Program'},
+  {id:'MET058',name:'AI Call Opt-Outs',calc:'Count of opt-out events per week',src:'NLPearl',pri:'P2',aud:'Compliance'},
+  {id:'MET059',name:'Avg Sentiment Score',calc:'Avg sentiment score per connected call',src:'NLPearl',pri:'P3',aud:'Program'},
+  {id:'MET060',name:'NLPearl Credits Consumed',calc:'Sum of credits consumed by call/minute/action',src:'NLPearl',pri:'P2',aud:'Finance'},
+  {id:'MET062',name:'Speed-to-Call SLA',calc:'% of MQPs called within 24h of stage entry',src:'NLPearl / Eloqua',pri:'P1',aud:'Program'},
+];
+
+function buildTable(){
+  const tbody=document.getElementById('mtr-body');
+  if(!tbody) return;
+  metrics.forEach(m=>{
+    const priCol=m.pri==='P1'?'var(--red)':m.pri==='P2'?'var(--gold)':'var(--text3)';
+    tbody.innerHTML+=`<tr data-gs="${m.id} ${m.name}">
+      <td>${m.id}</td>
+      <td style="color:var(--text)">${m.name}</td>
+      <td>${m.calc}</td>
+      <td>${m.src}</td>
+      <td style="color:${priCol};font-family:'DM Mono',monospace;font-size:10px">${m.pri}</td>
+      <td>${m.aud}</td>
+    </tr>`;
+  });
+}
+
+/* ── GLOSSARY SEARCH ─────────────────────────────────────────────────────── */
+let glInit=false;
+function initGlossarySearch(){
+  if(glInit) return; glInit=true;
+  const input=document.getElementById('gl-search');
+  if(!input) return;
+  input.addEventListener('input',()=>{
+    const q=input.value.trim().toLowerCase();
+    document.querySelectorAll('.gl-item').forEach(item=>{
+      item.classList.toggle('hidden',q.length>0 && !item.textContent.toLowerCase().includes(q));
+    });
+    document.querySelectorAll('.gl-section').forEach(sec=>{
+      const vis=sec.querySelectorAll('.gl-item:not(.hidden)').length;
+      sec.style.display=vis===0 && q.length>0?'none':'';
+    });
+  });
+}
+
+/* ── HELPERS ─────────────────────────────────────────────────────────────── */
+function set(id,val){ const el=document.getElementById(id); if(el) el.textContent=val; }
+function pct(n,d){ return d===0?'—':Math.round((n/d)*100)+'%'; }
+function lostPct(a,b){ return a===0?'—':Math.round(((a-b)/a)*100)+'%'; }
+
+/* ── POPULATE DATA BLOCK → DOM ───────────────────────────────────────────── */
+function populateFromData(){
+  // Auto-sum total delivered from quarters
+  T.total_delivered = T.q1_delivered + T.q2_delivered + T.q3_delivered + T.q4_delivered;
+
+  // Meta
+  set('tb-date', M.topbar_label);
+
+  // Summary hero
+  set('summary-hero-sub', G.summary_hero_subtitle);
+  set('hero-funnel', F.total_in_funnel);
+  set('hero-po', T.total_delivered);
+  set('hero-pickup', C.pickup_rate_pct+'%');
+  set('hero-sla', C.sla_compliance_pct+'%');
+
+  // Summary KPI cards
+  set('kpi-funnel-vol', F.total_in_funnel);
+  set('kpi-funnel-sub', F.eloqua_pipeline+' Eloqua pipeline + '+F.cs_intake_recent+' new CS leads ('+F.cs_intake_label+')');
+  const qualRate = F.stage_mel_alltime===0 ? '0%' : pct(T.total_delivered, F.stage_mel_alltime);
+  set('kpi-qual-rate', qualRate);
+  set('kpi-qual-sub', T.total_delivered+' POs from '+F.stage_mel_alltime+' MEL entries');
+  set('kpi-target', T.q1_delivered+' / '+T.q1_target);
+  set('kpi-target-sub', T.q1_required_per_week+' POs / week needed · '+M.q1_weeks_remaining+' weeks remain');
+  set('kpi-pickup', C.pickup_rate_pct+'%');
+  set('kpi-sla', C.sla_compliance_pct+'%');
+  set('kpi-cs-leads', CA.cs_intake_recent || F.cs_intake_recent);
+  set('kpi-cs-label', 'Campaign Leads — '+F.cs_intake_label);
+
+  // Open gaps
+  set('open-gaps-text', G.open_gaps_text);
+
+  // Funnel hero
+  set('funnel-hero-sub', 'MET001 + MET002 — '+F.eloqua_pipeline+' contacts in pipeline · '+F.stage_validation_avg_age_h+'h avg Validation dwell (SLA ceiling) · '+T.total_delivered+' PO conversions');
+
+  // Lifecycle stage boxes
+  set('lf-known-age',  'Avg '+F.stage_known_avg_age_h+'h');
+  set('lf-known-wip',  F.stage_known_wip);
+  set('lf-known-sub',  'WIP · '+F.stage_known_alltime+' all time');
+  set('lf-val-age',    'Avg '+F.stage_validation_avg_age_h+'h');
+  set('lf-val-wip',    F.stage_validation_wip);
+  set('lf-val-sub',    'WIP · '+F.stage_validation_alltime+' all time');
+  set('lf-mel-age',    'Avg '+F.stage_mel_avg_age_h+'h');
+  set('lf-mel-wip',    F.stage_mel_wip);
+  set('lf-mel-sub',    'WIP · '+F.stage_mel_alltime+' all time');
+  const poAgeTxt = F.stage_po_alltime===0 ? '0 delivered' : F.stage_po_alltime+' all time';
+  set('lf-po-age', poAgeTxt);
+  set('lf-po-wip',     F.stage_po_wip);
+  set('lf-po-sub',     'WIP · '+F.stage_po_alltime+' all time');
+
+  // Recycled/DQ badges
+  set('funnel-recycled', F.recycled);
+  set('funnel-dq',       F.disqualified);
+  set('term-recycled',   F.recycled);
+  set('term-dq',         F.disqualified);
+  set('term-po',         T.total_delivered);
+
+  // Attrition labels
+  const [u2ka, u2kb] = F.attrition_unknown_to_known;
+  const [k2va, k2vb] = F.attrition_known_to_validation;
+  const [v2ma, v2mb] = F.attrition_validation_to_mel;
+  const [m2pa, m2pb] = F.attrition_mel_to_po;
+  set('atr-u2k-label', u2ka+' to '+u2kb);
+  set('atr-k2v-label', k2va+' to '+k2vb);
+  set('atr-v2m-label', v2ma+' to '+v2mb);
+  set('atr-m2p-label', m2pa+' to '+m2pb);
+
+  // AI hero
+  set('ai-hero-sub', G.ai_section_hero_sub);
+  set('ai-attempts', C.total_attempts);
+  set('ai-pickup',   C.pickup_rate_pct+'%');
+  set('ai-sla',      C.sla_compliance_pct+'%');
+
+  // Signal distribution bars
+  const totalSigs = C.signal_strong + C.signal_weak + C.signal_negative + C.signal_no_connect;
+  const sigPct = (n) => totalSigs===0 ? '0%' : (n/totalSigs*100).toFixed(1)+'%';
+  set('sig-strong', C.signal_strong);
+  set('sig-weak',   C.signal_weak);
+  set('sig-neg',    C.signal_negative);
+  set('sig-nc',     C.signal_no_connect);
+  const sb = document.getElementById('sig-strong-bar'); if(sb) sb.style.width=sigPct(C.signal_strong);
+  const wb = document.getElementById('sig-weak-bar');   if(wb) wb.style.width=sigPct(C.signal_weak);
+  const nb = document.getElementById('sig-neg-bar');    if(nb) nb.style.width=sigPct(C.signal_negative);
+  const ncb= document.getElementById('sig-nc-bar');     if(ncb) ncb.style.width=sigPct(C.signal_no_connect);
+
+  // PO bottleneck note
+  set('po-bottleneck-note', G.po_bottleneck_note);
+
+  // Benchmark best week
+  set('bmt-best-pct', C.pickup_rate_pct+'%');
+  set('bmt-best-sub', 'Pickup rate — '+C.best_week_label+'. '+C.best_week_connected+' of '+C.best_week_attempts+' calls connected.');
+
+  // Campaign hero
+  set('cs-hero-sub', 'AWS | Accenture AWS VMware Migration HQL · 2 offers · '+CA.total_leads+' NetLine leads received · '+CA.c_level_pct+'% C-Level · 100% dual consent · Program Q1 target: '+T.q1_target+' POs by '+T.q1_due);
+  set('cs-q1-po',    T.q1_delivered+' / '+T.q1_target);
+  set('cs-q1-sub',   'Due '+T.q1_due+' · '+T.q1_required_per_week+' POs/week required');
+  set('cs-total-po', T.total_delivered+' / '+T.total_program_target);
+  set('cs-clevel',   CA.c_level_pct+'%');
+
+  set('cs-q1-po-tile',    T.q1_delivered+' / '+T.q1_target);
+  set('cs-q1-sub-tile',   'Due '+T.q1_due+' · '+T.q1_required_per_week+' POs/week required');
+  set('cs-total-po-tile', T.total_delivered+' / '+T.total_program_target);
+  set('cs-clevel-tile',   CA.c_level_pct+'%');
+  set('sb-pickup-badge',  C.pickup_rate_pct+'%');
+
+  // Targets hero sub (if present)
+  set('targets-hero-sub', T.total_program_target+' total POs across 4 quarters \u00b7 '+T.total_delivered+' delivered \u00b7 '+T.q1_required_per_week+' POs/week required in Q1 \u00b7 '+M.q1_weeks_remaining+' weeks remain');
+
+  // Funnel spotlight cards (hardcoded ages)
+  set('spot-mel-age', AG.mel_h+'h');
+  set('spot-val-age', AG.validation_h+'h');
+
+  // Attrition % values (computed from attrition arrays)
+  const [u2ka,u2kb]=F.attrition_unknown_to_known;
+  const [k2va,k2vb]=F.attrition_known_to_validation;
+  const [v2ma,v2mb]=F.attrition_validation_to_mel;
+  const [m2pa,m2pb]=F.attrition_mel_to_po;
+  const aPct=(a,b)=>a===0?'—':Math.round((a-b)/a*100)+'%';
+  const el_u2k=document.getElementById('atr-u2k-pct'); if(el_u2k){el_u2k.textContent=aPct(u2ka,u2kb); el_u2k.style.color=aPct(u2ka,u2kb)==='—'?'var(--text3)':parseFloat(aPct(u2ka,u2kb))>30?'var(--red)':'var(--teal)';}
+  const el_k2v=document.getElementById('atr-k2v-pct'); if(el_k2v){el_k2v.textContent=aPct(k2va,k2vb);}
+  const el_v2m=document.getElementById('atr-v2m-pct'); if(el_v2m){el_v2m.textContent=aPct(v2ma,v2mb);}
+  const el_m2p=document.getElementById('atr-m2p-pct'); if(el_m2p){el_m2p.textContent=aPct(m2pa,m2pb);}
+  set('atr-m2p-txt', m2pb===0?'none converted':m2pb+' converted');
+
+  // AI pending fields
+  set('ai-avg-dur',   C.avg_duration_min===null ? '—' : C.avg_duration_min+'m');
+  set('ai-opt-outs',  C.opt_outs===null ? '—' : C.opt_outs);
+  set('ai-sentiment', C.avg_sentiment===null ? '—' : C.avg_sentiment);
+  set('ai-credits',   C.credits_used===null ? '—' : C.credits_used);
+
+  // Campaign pacing table
+  const fmtDollar = n => '$'+Number(n).toLocaleString();
+  set('camp-spend',         fmtDollar(CA.spend_to_date));
+  set('camp-spend-note',    CA.total_leads+' leads x $'+CA.cpl);
+  set('camp-budget-total',  fmtDollar(CA.budget_total));
+  set('camp-budget-rem',    fmtDollar(CA.budget_remaining));
+  set('camp-budget-rem-note', 'Covers '+Math.floor(CA.budget_remaining/CA.cpl)+' additional leads');
+
+  // Quarterly target cards
+  set('q1-delivered',    T.q1_delivered);
+  set('q1-target-disp',  T.q1_target);
+  set('q1-due-disp',     T.q1_due);
+  set('q1-pace',         T.q1_required_per_week+' POs / week \u00b7 '+M.q1_weeks_remaining+' wks remain');
+  const q1bar = document.getElementById('q1-bar');
+  if (q1bar) q1bar.style.width = T.q1_target > 0 ? Math.min(100, Math.round(T.q1_delivered/T.q1_target*100))+'%' : '0%';
+
+  set('q2-delivered',    T.q2_delivered);
+  set('q2-target-disp',  T.q2_target);
+  set('q2-due-disp',     T.q2_due);
+  const q2bar = document.getElementById('q2-bar');
+  if (q2bar) q2bar.style.width = T.q2_target > 0 ? Math.min(100, Math.round(T.q2_delivered/T.q2_target*100))+'%' : '0%';
+
+  set('q3-delivered',    T.q3_delivered);
+  set('q3-target-disp',  T.q3_target);
+  set('q3-due-disp',     T.q3_due);
+  const q3bar = document.getElementById('q3-bar');
+  if (q3bar) q3bar.style.width = T.q3_target > 0 ? Math.min(100, Math.round(T.q3_delivered/T.q3_target*100))+'%' : '0%';
+
+  set('q4-delivered',    T.q4_delivered);
+  set('q4-target-disp',  T.q4_target);
+  set('q4-due-disp',     T.q4_due);
+  const q4bar = document.getElementById('q4-bar');
+  if (q4bar) q4bar.style.width = T.q4_target > 0 ? Math.min(100, Math.round(T.q4_delivered/T.q4_target*100))+'%' : '0%';
+}
+
+/* ── INIT ─────────────────────────────────────────────────────────────────── */
+window.addEventListener('load',()=>{
+  populateFromData();
+  buildTable();
+  drawTrend();
+  drawPickup();
+});
+
+// Listen for show('glossary') and init search
+const origShow=window.show;
+window.show=function(id){
+  origShow.call(this,id);
+  if(id==='glossary') initGlossarySearch();
+};
+
+/* ══════════════════════════════════════════════════════════════════════════
+   EDIT MODE — CHANGELOG — SAVE & EXPORT
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── STATE ────────────────────────────────────────────────────────────────── */
+let editMode = false;
+const changelog = [];
+
+/* ── EDIT FIELD REGISTRY ─────────────────────────────────────────────────── */
+// Each entry: { id, label, path, type }
+// path is dot-notation into ND, e.g. "funnel.total_in_funnel"
+// type: 'number' | 'text' | 'textarea'
+const EDIT_FIELDS = [
+  // ── META ──────────────────────────────────────────────────────────────
+  { id:'tb-date',             label:'Topbar Date Label',          path:'meta.topbar_label',                  type:'text' },
+  { id:'summary-hero-sub',    label:'Summary Hero Subtitle',      path:'gaps.summary_hero_subtitle',         type:'textarea' },
+
+  // ── SUMMARY KPI CARDS ─────────────────────────────────────────────────
+  { id:'kpi-funnel-vol',      label:'MET001 — Funnel Volume',     path:'funnel.total_in_funnel',             type:'number' },
+  // MET003 qual rate is computed — readonly
+  { id:'kpi-qual-rate',       label:'MET003 — Qual Rate',         path:'_computed.qual_rate',                type:'text', readonly:true },
+  // MET004 target progress is computed — readonly
+  { id:'kpi-target',          label:'MET004 — Target Progress',   path:'_computed.q1_progress',              type:'text', readonly:true },
+  { id:'kpi-pickup',          label:'MET056 — Pickup Rate %',     path:'calls.pickup_rate_pct',              type:'number' },
+  { id:'kpi-sla',             label:'MET062 — SLA Compliance %',  path:'calls.sla_compliance_pct',           type:'number' },
+  { id:'kpi-cs-leads',        label:'TechTarget — Total Leads',   path:'campaign.total_leads',               type:'number' },
+
+  // ── FUNNEL STAGE — WIP COUNTS ─────────────────────────────────────────
+  { id:'lf-known-wip',        label:'Known — WIP',                path:'funnel.stage_known_wip',             type:'number' },
+  { id:'lf-val-wip',          label:'Validation — WIP',           path:'funnel.stage_validation_wip',        type:'number' },
+  { id:'lf-mel-wip',          label:'MEL — WIP',                  path:'funnel.stage_mel_wip',               type:'number' },
+  { id:'lf-po-wip',           label:'PO — WIP',                   path:'funnel.stage_po_wip',                type:'number' },
+
+  // ── FUNNEL STAGE — AVG AGES ────────────────────────────────────────────
+  { id:'lf-known-age',        label:'Known — Avg Age (h)',         path:'funnel.stage_known_avg_age_h',       type:'number' },
+  { id:'lf-val-age',          label:'Validation — Avg Age (h)',    path:'funnel.stage_validation_avg_age_h',  type:'number' },
+  { id:'lf-mel-age',          label:'MEL — Avg Age (h)',           path:'funnel.stage_mel_avg_age_h',         type:'number' },
+
+  // ── FUNNEL SPOTLIGHT CARDS ────────────────────────────────────────────
+  { id:'spot-mel-age',        label:'Spotlight — MEL Age (h)',     path:'chart_age.mel_h',                    type:'number' },
+  { id:'spot-val-age',        label:'Spotlight — Validation Age (h)', path:'chart_age.validation_h',          type:'number' },
+
+  // ── FUNNEL RECYCLED / DQ ──────────────────────────────────────────────
+  { id:'funnel-recycled',     label:'Recycled to Nurture',         path:'funnel.recycled',                    type:'number' },
+  { id:'funnel-dq',           label:'Disqualified',                path:'funnel.disqualified',                type:'number' },
+
+  // ── PO / TARGETS ──────────────────────────────────────────────────────
+  { id:'hero-po',             label:'Total POs Delivered',         path:'targets.total_delivered',            type:'number', readonly:true },
+  { id:'q1-delivered',        label:'Q1 POs Delivered',            path:'targets.q1_delivered',               type:'number' },
+  { id:'q2-delivered',        label:'Q2 POs Delivered',            path:'targets.q2_delivered',               type:'number' },
+  { id:'q3-delivered',        label:'Q3 POs Delivered',            path:'targets.q3_delivered',               type:'number' },
+  { id:'q4-delivered',        label:'Q4 POs Delivered',            path:'targets.q4_delivered',               type:'number' },
+  { id:'q1-target-disp',      label:'Q1 Target',                   path:'targets.q1_target',                  type:'number' },
+  { id:'q2-target-disp',      label:'Q2 Target',                   path:'targets.q2_target',                  type:'number' },
+  { id:'q3-target-disp',      label:'Q3 Target',                   path:'targets.q3_target',                  type:'number' },
+  { id:'q4-target-disp',      label:'Q4 Target',                   path:'targets.q4_target',                  type:'number' },
+  { id:'q1-due-disp',         label:'Q1 Due Date',                 path:'targets.q1_due',                     type:'text' },
+  { id:'q2-due-disp',         label:'Q2 Due Date',                 path:'targets.q2_due',                     type:'text' },
+  { id:'q3-due-disp',         label:'Q3 Due Date',                 path:'targets.q3_due',                     type:'text' },
+  { id:'q4-due-disp',         label:'Q4 Due Date',                 path:'targets.q4_due',                     type:'text' },
+
+  // ── AI CALLS ──────────────────────────────────────────────────────────
+  { id:'ai-attempts',         label:'MET055 — Calls Attempted',    path:'calls.total_attempts',               type:'number' },
+  { id:'ai-pickup',           label:'MET056 — Pickup Rate %',      path:'calls.pickup_rate_pct',              type:'number' },
+  { id:'ai-sla',              label:'MET062 — SLA Compliance %',   path:'calls.sla_compliance_pct',           type:'number' },
+  { id:'ai-avg-dur',          label:'MET057 — Avg Call Duration',  path:'calls.avg_duration_min',             type:'text' },
+  { id:'ai-opt-outs',         label:'MET058 — Opt-Outs',           path:'calls.opt_outs',                     type:'text' },
+  { id:'ai-sentiment',        label:'MET059 — Avg Sentiment',      path:'calls.avg_sentiment',                type:'text' },
+  { id:'ai-credits',          label:'MET060 — Credits Used',       path:'calls.credits_used',                 type:'text' },
+  { id:'sig-strong',          label:'Signal — Strong',             path:'calls.signal_strong',                type:'number' },
+  { id:'sig-weak',            label:'Signal — Weak',               path:'calls.signal_weak',                  type:'number' },
+  { id:'sig-neg',             label:'Signal — Negative',           path:'calls.signal_negative',              type:'number' },
+  { id:'sig-nc',              label:'Signal — No Connect',         path:'calls.signal_no_connect',            type:'number' },
+
+  // ── CAMPAIGN ──────────────────────────────────────────────────────────
+  { id:'cs-clevel-tile',      label:'C-Level %',                   path:'campaign.c_level_pct',               type:'number' },
+  { id:'camp-spend',          label:'Spend to Date ($)',           path:'campaign.spend_to_date',             type:'number' },
+  { id:'camp-budget-total',   label:'Campaign Budget ($)',         path:'campaign.budget_total',              type:'number' },
+  { id:'camp-budget-rem',     label:'Budget Remaining ($)',        path:'campaign.budget_remaining',          type:'number' },
+
+  // ── OPEN GAPS NARRATIVE ────────────────────────────────────────────────
+  { id:'open-gaps-text',      label:'Open Gaps Text',              path:'gaps.open_gaps_text',                type:'textarea' },
+  { id:'po-bottleneck-note',  label:'PO Bottleneck Note',          path:'gaps.po_bottleneck_note',            type:'textarea' },
+  { id:'ai-hero-sub',         label:'AI Section Hero Subtitle',    path:'gaps.ai_section_hero_sub',           type:'textarea' },
+];
+
+/* ── PATH HELPERS ─────────────────────────────────────────────────────────── */
+function getPath(obj, path) {
+  return path.startsWith('_computed') ? null :
+    path.split('.').reduce((o,k) => (o && o[k] !== undefined ? o[k] : null), obj);
+}
+function setPath(obj, path, val) {
+  if (path.startsWith('_computed')) return;
+  const keys = path.split('.');
+  let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) o = o[keys[i]];
+  const last = keys[keys.length - 1];
+  const prev = o[last];
+  o[last] = val;
+  return prev;
+}
+
+/* ── TOGGLE EDIT MODE ─────────────────────────────────────────────────────── */
+function toggleEditMode() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  const btn = document.getElementById('edit-toggle-btn');
+  const expBtn = document.getElementById('export-btn');
+  const clSec = document.getElementById('changelog-section');
+
+  if (editMode) {
+    btn.textContent = '✓ View Mode';
+    btn.classList.add('edit-on');
+    expBtn.style.display = 'inline-block';
+    clSec.classList.add('visible');
+    activateEditFields();
+  } else {
+    btn.textContent = '✎ Edit Mode';
+    btn.classList.remove('edit-on');
+    deactivateEditFields();
+  }
+}
+
+/* ── ACTIVATE EDIT FIELDS ────────────────────────────────────────────────── */
+function activateEditFields() {
+  EDIT_FIELDS.forEach(f => {
+    if (f.readonly) return;
+    const el = document.getElementById(f.id);
+    if (!el || el.querySelector('.ef')) return; // already wrapped
+    if (f.path.startsWith('_computed')) return;
+    const raw = getPath(ND, f.path);
+
+    const currentText = el.textContent.trim();
+    // Dollar-formatted fields: show raw number for editing
+    const editVal = (typeof raw === 'number' && currentText.startsWith('$'))
+      ? String(raw)
+      : (raw === null ? '' : currentText);
+
+    const tag = f.type === 'textarea' ? 'textarea' : 'input';
+    const input = document.createElement(tag);
+    input.className = 'ef' + (f.type === 'number' ? ' ef-num' : '');
+    if (tag === 'input') {
+      input.type = 'text';
+      input.value = editVal;
+    } else {
+      input.value = editVal;
+      input.rows = Math.max(2, Math.ceil(editVal.length / 80));
+    }
+    input.dataset.path = f.path;
+    input.dataset.label = f.label;
+    input.dataset.origVal = editVal;
+
+    el.textContent = '';
+    el.appendChild(input);
+
+    input.addEventListener('change', onFieldChange);
+  });
+}
+
+/* ── DEACTIVATE EDIT FIELDS ──────────────────────────────────────────────── */
+function deactivateEditFields() {
+  document.querySelectorAll('.ef').forEach(input => {
+    const parent = input.parentElement;
+    if (!parent) return;
+    parent.textContent = input.value;
+  });
+}
+
+/* ── FIELD CHANGE HANDLER ────────────────────────────────────────────────── */
+function onFieldChange(e) {
+  const input = e.target;
+  const path = input.dataset.path;
+  const label = input.dataset.label;
+  const origDisplay = input.dataset.origVal;
+  const newDisplay = input.value.trim();
+
+  if (newDisplay === origDisplay) return;
+
+  // Parse value for storage
+  const raw = getPath(ND, path);
+  let parsed = newDisplay;
+  if (typeof raw === 'number') {
+    parsed = parseFloat(newDisplay.replace(/[^0-9.-]/g, ''));
+    if (isNaN(parsed)) { input.value = origDisplay; return; }
+  } else if (raw === null) {
+    // null fields: store as number if looks numeric, string otherwise, null if blank/dash
+    const stripped = newDisplay.replace(/[^0-9.-]/g, '');
+    if (newDisplay === '' || newDisplay === '—') { parsed = null; }
+    else if (stripped !== '' && !isNaN(parseFloat(stripped))) { parsed = parseFloat(stripped); }
+    else { parsed = newDisplay; }
+  }
+
+  // Update data object
+  setPath(ND, path, parsed);
+
+  // Update display origin for subsequent edits
+  input.dataset.origVal = newDisplay;
+
+  // Log to changelog
+  const ts = new Date().toLocaleTimeString('en-US', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  changelog.push({ ts, label, old: origDisplay, new: newDisplay });
+  renderChangelog();
+
+  // Re-run populate so computed fields (qual rate, target progress etc) stay in sync
+  populateFromData();
+
+  // Re-inject input that may have been replaced by populateFromData
+  requestAnimationFrame(() => {
+    const el = document.getElementById(EDIT_FIELDS.find(f=>f.path===path)?.id);
+    if (el && !el.querySelector('.ef') && editMode) {
+      const newInput = document.createElement(input.tagName.toLowerCase());
+      newInput.className = input.className;
+      newInput.type = input.type || 'text';
+      newInput.value = newDisplay;
+      newInput.dataset.path = path;
+      newInput.dataset.label = label;
+      newInput.dataset.origVal = newDisplay;
+      el.textContent = '';
+      el.appendChild(newInput);
+      newInput.addEventListener('change', onFieldChange);
+    }
+  });
+}
+
+/* ── RENDER CHANGELOG ─────────────────────────────────────────────────────── */
+function renderChangelog() {
+  const emptyMsg = document.getElementById('cl-empty-msg');
+  const table = document.getElementById('cl-table');
+  const rows = document.getElementById('cl-rows');
+  if (!rows) return;
+
+  if (changelog.length === 0) {
+    emptyMsg.style.display = '';
+    table.style.display = 'none';
+    return;
+  }
+
+  emptyMsg.style.display = 'none';
+  table.style.display = '';
+
+  rows.innerHTML = [...changelog].reverse().map(e =>
+    `<div class="cl-row">
+      <span class="cl-ts">${e.ts}</span>
+      <span class="cl-field">${e.label}</span>
+      <span class="cl-old">${e.old}</span>
+      <span class="cl-new">${e.new}</span>
+    </div>`
+  ).join('');
+}
+
+/* ── SAVE & EXPORT ────────────────────────────────────────────────────────── */
+function saveAndExport() {
+  // 1. Deactivate edit fields so inputs collapse back to text
+  deactivateEditFields();
+
+  // 2. Increment version
+  ND._version = (ND._version || 15) + 1;
+  ND.meta.version = ND._version;
+
+  // 3. Serialize mutated data back into the data block
+  const dataBlock = document.getElementById('nexus-data');
+  dataBlock.textContent = JSON.stringify(ND, null, 2);
+
+  // 4. Re-populate DOM from updated data (so exported HTML reflects new values)
+  populateFromData();
+
+  // 5. Capture full document HTML
+  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+
+  // 6. Trigger download
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: 'nexus_dashboard_v' + ND._version + '.html'
+  });
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+
+  // 7. Toast confirmation
+  showToast('Exported as nexus_dashboard_v' + ND._version + '.html');
+
+  // 8. Re-activate edit fields if still in edit mode
+  if (editMode) {
+    requestAnimationFrame(() => activateEditFields());
+  }
+}
+
+/* ── TOAST ────────────────────────────────────────────────────────────────── */
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
