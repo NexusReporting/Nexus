@@ -481,6 +481,28 @@ body.edit-mode .ef:focus{background:rgba(99,102,241,.12);border-bottom:1.5px sol
   [style*="grid-template-columns: 1fr auto auto auto"],[style*="grid-template-columns:1fr auto auto auto"]{grid-template-columns:1fr auto!important}
 }
 
+/* ── GITHUB PUSH MODAL ───────────────────────────────────────────────────── */
+#gh-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.55);backdrop-filter:blur(3px)}
+#gh-modal.on{display:flex}
+#gh-modal-box{background:var(--bg2);border:1px solid var(--border2);border-radius:14px;padding:28px 28px 24px;width:380px;max-width:92vw;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+#gh-modal-box h3{font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:.06em;color:var(--text);margin-bottom:4px}
+#gh-modal-box .gh-sub{font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:20px}
+#gh-modal-box label{display:block;font-family:'DM Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:5px}
+#gh-pat{width:100%;box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--bg3);color:var(--text);font-family:'DM Mono',monospace;font-size:12px;outline:none;margin-bottom:6px;transition:border-color .15s}
+#gh-pat:focus{border-color:var(--px)}
+#gh-pat::placeholder{color:var(--text3)}
+.gh-note{font-size:10px;color:var(--text3);line-height:1.5;margin-bottom:16px}
+.gh-note a{color:var(--px2);text-decoration:none}
+.gh-note a:hover{text-decoration:underline}
+.gh-btns{display:flex;gap:8px;justify-content:flex-end}
+.gh-btns button{padding:8px 16px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);transition:all .15s}
+#gh-cancel{background:var(--bg3);color:var(--text2)}
+#gh-cancel:hover{border-color:var(--border2)}
+#gh-push{background:var(--px);color:#fff;border-color:var(--px)}
+#gh-push:hover{opacity:.88}
+#gh-push:disabled{opacity:.45;cursor:not-allowed}
+#gh-status{font-family:'DM Mono',monospace;font-size:10px;margin-top:10px;min-height:16px;text-align:center}
+
 /* ── PRINT ───────────────────────────────────────────────────────────────── */
 @media print{
   .sb,.tb,.data-footer,.sb-toggle,.sb-overlay,#nx-gate,#changelog-section,.bsm,.export-btn,#edit-toggle-btn{display:none!important}
@@ -1774,6 +1796,25 @@ const AG = ND.chart_age;
   </div>
 </div>
 
+<!-- ═══════════════ GITHUB PUSH MODAL ═══════════════ -->
+<div id="gh-modal" role="dialog" aria-modal="true" aria-labelledby="gh-modal-title">
+  <div id="gh-modal-box">
+    <h3 id="gh-modal-title">Push to GitHub</h3>
+    <div class="gh-sub">NexusReporting / Nexus &nbsp;·&nbsp; main branch</div>
+    <label for="gh-pat">GitHub Personal Access Token</label>
+    <input id="gh-pat" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" spellcheck="false">
+    <div class="gh-note">
+      Token is used once and never stored. Needs <code>repo</code> write scope.<br>
+      Generate at GitHub &rarr; Settings &rarr; Developer settings &rarr; <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">Personal access tokens</a>.
+    </div>
+    <div class="gh-btns">
+      <button id="gh-cancel">Cancel</button>
+      <button id="gh-push">Push to GitHub</button>
+    </div>
+    <div id="gh-status"></div>
+  </div>
+</div>
+
 <!-- ═══════════════ DATA FOOTER ═══════════════ -->
 <div class="data-footer" id="data-footer">
   <div><span class="foot-dot"></span>Data as of <span id="footer-date"></span></div>
@@ -2714,8 +2755,9 @@ function renderChangelog() {
 }
 
 /* ── SAVE & EXPORT ────────────────────────────────────────────────────────── */
-function saveAndExport() {
-  // 1. Deactivate edit fields so inputs collapse back to text
+/* ── PREPARE HTML PAYLOAD ─────────────────────────────────────────────────── */
+function prepareExportHTML() {
+  // 1. Deactivate edit fields
   deactivateEditFields();
 
   // 2. Increment version
@@ -2726,13 +2768,17 @@ function saveAndExport() {
   const dataBlock = document.getElementById('nexus-data');
   dataBlock.textContent = JSON.stringify(ND, null, 2);
 
-  // 4. Re-populate DOM from updated data (so exported HTML reflects new values)
+  // 4. Re-populate DOM from updated data
   populateFromData();
 
-  // 5. Capture full document HTML
-  const html = '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+  // 5. Return full HTML string
+  return '<!DOCTYPE html>\n' + document.documentElement.outerHTML;
+}
 
-  // 6. Trigger download
+function saveAndExport() {
+  const html = prepareExportHTML();
+
+  // Trigger local download
   const blob = new Blob([html], { type: 'text/html' });
   const a = Object.assign(document.createElement('a'), {
     href: URL.createObjectURL(blob),
@@ -2743,14 +2789,122 @@ function saveAndExport() {
   document.body.removeChild(a);
   URL.revokeObjectURL(a.href);
 
-  // 7. Toast confirmation
-  showToast('Exported as nexus_dashboard_v' + ND._version + '.html');
+  // Show GitHub push modal
+  openGHModal(html);
 
-  // 8. Re-activate edit fields if still in edit mode
-  if (editMode) {
-    requestAnimationFrame(() => activateEditFields());
+  if (editMode) requestAnimationFrame(() => activateEditFields());
+}
+
+/* ── GITHUB PUSH MODAL ────────────────────────────────────────────────────── */
+let _ghHTML = null;
+
+function openGHModal(html) {
+  _ghHTML = html;
+  const modal = document.getElementById('gh-modal');
+  document.getElementById('gh-pat').value = '';
+  document.getElementById('gh-status').textContent = '';
+  document.getElementById('gh-status').style.color = '';
+  document.getElementById('gh-push').disabled = false;
+  document.getElementById('gh-push').textContent = 'Push to GitHub';
+  modal.classList.add('on');
+  setTimeout(() => document.getElementById('gh-pat').focus(), 80);
+}
+
+function closeGHModal() {
+  document.getElementById('gh-modal').classList.remove('on');
+  document.getElementById('gh-pat').value = '';
+  _ghHTML = null;
+}
+
+async function pushToGitHub() {
+  const pat   = document.getElementById('gh-pat').value.trim();
+  const btn   = document.getElementById('gh-push');
+  const status = document.getElementById('gh-status');
+
+  if (!pat) {
+    status.textContent = 'Please enter your token.';
+    status.style.color = 'var(--red)';
+    return;
+  }
+
+  const OWNER  = 'NexusReporting';
+  const REPO   = 'Nexus';
+  const PATH   = 'index.html';
+  const BRANCH = 'main';
+  const API    = 'https://api.github.com';
+
+  btn.disabled = true;
+  btn.textContent = 'Pushing...';
+  status.style.color = 'var(--text3)';
+  status.textContent = 'Fetching current file SHA...';
+
+  try {
+    // Step 1: Get current file SHA (required by GitHub API to update a file)
+    const getRes = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${PATH}?ref=${BRANCH}`, {
+      headers: {
+        'Authorization': 'token ' + pat,
+        'Accept': 'application/vnd.github+json'
+      }
+    });
+
+    if (getRes.status === 401) throw new Error('Invalid token. Check your PAT and try again.');
+    if (getRes.status === 404) throw new Error('Repo or file not found. Check OWNER/REPO/PATH.');
+    if (!getRes.ok) throw new Error('GitHub API error: ' + getRes.status);
+
+    const fileData = await getRes.json();
+    const sha = fileData.sha;
+
+    status.textContent = 'Uploading updated file...';
+
+    // Step 2: Base64-encode the HTML
+    const encoded = btoa(unescape(encodeURIComponent(_ghHTML)));
+
+    // Step 3: Commit the updated file
+    const putRes = await fetch(`${API}/repos/${OWNER}/${REPO}/contents/${PATH}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'token ' + pat,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Dashboard update: v' + ND._version + ' (' + (ND.meta.report_as_of || ND.meta.report_date) + ')',
+        content: encoded,
+        sha: sha,
+        branch: BRANCH
+      })
+    });
+
+    if (!putRes.ok) {
+      const err = await putRes.json();
+      throw new Error(err.message || 'Push failed: ' + putRes.status);
+    }
+
+    // Success
+    status.style.color = 'var(--teal)';
+    status.textContent = 'Pushed. GitHub Pages will redeploy in ~2 minutes.';
+    btn.textContent = 'Done';
+    setTimeout(closeGHModal, 2800);
+    showToast('v' + ND._version + ' pushed to GitHub');
+
+  } catch (err) {
+    status.style.color = 'var(--red)';
+    status.textContent = err.message;
+    btn.disabled = false;
+    btn.textContent = 'Push to GitHub';
+  } finally {
+    // Clear token from memory
+    document.getElementById('gh-pat').value = '';
   }
 }
+
+/* ── GITHUB MODAL EVENT LISTENERS ────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('gh-cancel').addEventListener('click', closeGHModal);
+  document.getElementById('gh-push').addEventListener('click', pushToGitHub);
+  document.getElementById('gh-pat').addEventListener('keydown', e => { if (e.key === 'Enter') pushToGitHub(); });
+  document.getElementById('gh-modal').addEventListener('click', e => { if (e.target === document.getElementById('gh-modal')) closeGHModal(); });
+});
 
 /* ── TOAST ────────────────────────────────────────────────────────────────── */
 function showToast(msg) {
